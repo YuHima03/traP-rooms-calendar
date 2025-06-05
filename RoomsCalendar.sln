@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoomsCalendar.Server", "src
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoomsCalendar.Client", "src\RoomsCalendar.Client\RoomsCalendar.Client.csproj", "{861A038B-90AC-4781-B0EA-E39827BFF894}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoomsCalendar.Share", "RoomsCalendar.Share\RoomsCalendar.Share.csproj", "{7E791733-073D-4318-ADB1-D42DF887481C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoomsCalendar.Share", "src\RoomsCalendar.Share\RoomsCalendar.Share.csproj", "{7E791733-073D-4318-ADB1-D42DF887481C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
