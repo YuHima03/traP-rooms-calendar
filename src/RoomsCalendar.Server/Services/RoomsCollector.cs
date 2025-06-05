@@ -16,7 +16,7 @@ namespace RoomsCalendar.Server.Services
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             await Task.Delay(TimeSpan.FromSeconds(20), stoppingToken);
-            PeriodicTimer timer = new(TimeSpan.FromSeconds(15));
+            PeriodicTimer timer = new(TimeSpan.FromMinutes(15));
             DateTimeOffset lastFullCollection = DateTimeOffset.MinValue;
             do
             {
