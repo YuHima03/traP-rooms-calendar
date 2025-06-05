@@ -1,5 +1,6 @@
 ﻿@page "/"
 @inject IServiceProvider Services
+@inject RoomsCalendar.Share.Domain.IRoomsProvider RoomsProvider
 
 <PageTitle>進捗部屋カレンダー</PageTitle>
 
@@ -39,18 +40,12 @@ else
         var since = DateTime.UtcNow.AddHours(9).Date.AddHours(-9);
         var until = since.AddDays(14).AddTicks(-1);
 
-        var httpClient = Services.GetRequiredService<System.Net.Http.HttpClient>();
-
-        var res = await httpClient.GetAsync($"api/rooms?since={Uri.EscapeDataString($"{since:O}")}&until={Uri.EscapeDataString($"{until:O}")}");
-        if (res.IsSuccessStatusCode)
+        var rooms = await RoomsProvider.GetRoomsAsync(since, until, CancellationToken.None);
+        if (rooms is not null)
         {
-            var rooms = await res.Content.ReadFromJsonAsync<IEnumerable<Room>>();
-            if (rooms is not null)
-            {
-                Rooms = rooms
-                    .GroupBy(r => DateOnly.FromDateTime(r.AvailableSince.UtcDateTime.AddHours(9)))
-                    .OrderBy(g => g.Key);
-            }
+            Rooms = rooms
+                .GroupBy(r => DateOnly.FromDateTime(r.AvailableSince.UtcDateTime.AddHours(9)))
+                .OrderBy(g => g.Key);
         }
     }
 }
