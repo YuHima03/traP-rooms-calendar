@@ -403,3 +403,6 @@ FodyWeavers.xsd
 
 # Docker .env files
 .env
+
+# Tailwind CSS generated
+src/RoomsCalendar.Client/wwwroot/css/app.css
