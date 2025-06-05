@@ -1,0 +1,15 @@
+@RoomsCalendar.Server_HostAddress = http://localhost:5211
+
+GET {{RoomsCalendar.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+GET {{RoomsCalendar.Server_HostAddress}}/api/rooms
+Accept: application/json
+
+###
+
+GET {{RoomsCalendar.Server_HostAddress}}/api/rooms?since={{$datetime iso8601}}
+Accept: application/json
+

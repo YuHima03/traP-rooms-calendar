@@ -1,0 +1,56 @@
+﻿@page "/"
+@inject IServiceProvider Services
+
+<PageTitle>進捗部屋カレンダー</PageTitle>
+
+<h2>今後の進捗部屋</h2>
+
+<p>現状、2週間先まで表示しています。</p>
+
+<p>その他の期間の情報は <code>/api/rooms?since={}&amp;until={}</code> を使ってください。</p>
+
+@if (Rooms is null)
+{
+    <p>読み込み中......</p>
+}
+else if (!Rooms.Any())
+{
+    <p>情報がありません。</p>
+}
+else
+{
+    @foreach (var g in Rooms)
+    {
+        <h3>@g.Key.ToString("yyyy/MM/dd ddd")</h3>
+        <ul>
+            @foreach (var r in g)
+            {
+                <li><strong>@r.PlaceName</strong> (@r.AvailableSince.UtcDateTime.AddHours(9).ToString("HH:mm") ~ @(r.AvailableUntil.UtcDateTime.AddHours(9).ToString(DateOnly.FromDateTime(r.AvailableUntil.UtcDateTime.AddHours(9)) != g.Key ? "yyyy/MM/dd HH:mm" : "HH:mm")))</li>
+            }
+        </ul>
+    }
+}
+
+@code {
+    public IEnumerable<IGrouping<DateOnly, Room>>? Rooms { get; private set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var since = DateTime.UtcNow.AddHours(9).Date.AddHours(-9);
+        var until = since.AddDays(14).AddTicks(-1);
+
+        var httpClient = Services.GetRequiredService<System.Net.Http.HttpClient>();
+
+        var res = await httpClient.GetAsync($"api/rooms?since={Uri.EscapeDataString($"{since:O}")}&until={Uri.EscapeDataString($"{until:O}")}");
+        if (res.IsSuccessStatusCode)
+        {
+            var rooms = await res.Content.ReadFromJsonAsync<IEnumerable<Room>>();
+            if (rooms is not null)
+            {
+                Rooms = rooms
+                    .GroupBy(r => DateOnly.FromDateTime(r.AvailableSince.UtcDateTime.AddHours(9)))
+                    .OrderBy(g => g.Key);
+            }
+        }
+    }
+}

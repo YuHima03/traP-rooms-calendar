@@ -1,0 +1,11 @@
+services:
+  server:
+    build:
+      dockerfile: src/RoomsCalendar.Server/Dockerfile
+      context: .
+    ports:
+      - 8080:8080
+      - 8081:8081
+    env_file:
+      - .env
+    mem_limit: 256m
