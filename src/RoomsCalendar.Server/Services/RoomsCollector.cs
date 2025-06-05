@@ -16,7 +16,7 @@ namespace RoomsCalendar.Server.Services
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             await Task.Delay(TimeSpan.FromSeconds(20), stoppingToken);
-            PeriodicTimer timer = new(TimeSpan.FromMinutes(15));
+            PeriodicTimer timer = new(TimeSpan.FromSeconds(15));
             DateTimeOffset lastFullCollection = DateTimeOffset.MinValue;
             do
             {
@@ -33,8 +33,12 @@ namespace RoomsCalendar.Server.Services
                             _timeZoneInfo
                         );
                     }
+                    else
+                    {
+                        lastFullCollection = utcNow;
+                    }
 
-                    rooms = await knoq.RoomsApi.GetRoomsAsync(dateBegin: since.ToString("O"), cancellationToken: stoppingToken);
+                        rooms = await knoq.RoomsApi.GetRoomsAsync(dateBegin: since.ToString("O"), cancellationToken: stoppingToken);
 
                     var filterd = rooms
                         .Where(r => r.Verified)
@@ -165,7 +169,6 @@ namespace RoomsCalendar.Server.Services
         public static Room KnoqRoomToDomainRoom(this KnoqRoom room)
         {
             return new Room(
-                room.Id,
                 room.Place,
                 room.StartsAt,
                 room.EndsAt

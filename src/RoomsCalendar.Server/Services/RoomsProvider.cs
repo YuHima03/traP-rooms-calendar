@@ -8,83 +8,43 @@ namespace RoomsCalendar.Server.Services
 {
     sealed class RoomsProvider : IRoomsProvider
     {
-        readonly RoomsList _rooms = new();
+        readonly List<Room> _rooms = [];
 
         public ValueTask<Room[]> GetRoomsAsync(DateTimeOffset since, DateTimeOffset until, CancellationToken ct)
         {
             lock (_rooms)
             {
-                return new ValueTask<Room[]>(_rooms.Get(since, until));
+                var rooms = CollectionsMarshal.AsSpan(_rooms);
+                var idxStart = BinarySearch.LowerBound<Room, DateTimeOffset>(rooms, since, RoomsExtensions.CompareAvailableUntil);
+                if (idxStart == -1)
+                {
+                    return ValueTask.FromResult(Array.Empty<Room>());
+                }
+                return ValueTask.FromResult(rooms[idxStart..]
+                    .AsValueEnumerable()
+                    .Where(r => r.AvailableSince <= until)
+                    .Order(RoomsExtensions.AvailableSinceComparer)
+                    .ToArray());
             }
         }
 
         public ValueTask UpdateRoomsAsync(IEnumerable<Room> rooms, DateTimeOffset since, CancellationToken ct)
         {
-            lock(_rooms)
+            lock (_rooms)
             {
-                _rooms.Update(rooms, since);
+                var idx = BinarySearch.LowerBound<Room, DateTimeOffset>(CollectionsMarshal.AsSpan(_rooms), since, RoomsExtensions.CompareAvailableUntil);
+                if (idx == 0)
+                {
+                    _rooms.Clear();
+                }
+                else if (idx > 0)
+                {
+                    CollectionsMarshal.SetCount(_rooms, idx);
+                }
+                _rooms.AddRange(rooms);
+                _rooms.Sort(RoomsExtensions.CompareToAvailableUntil);
             }
             return ValueTask.CompletedTask;
-        }
-    }
-
-    sealed class RoomsList
-    {
-        /// <summary>
-        /// <see cref="Room.AvailableUntil"/> の昇順でソートされている.
-        /// </summary>
-        /// <remarks>
-        /// 検索は基本的に未来の情報の取得に使われることが想定されるため, <see cref="Room.AvailableUntil"/> との比較で絞り込むことで計算量の削減が見込まれる.
-        /// </remarks>
-        readonly List<Room> _items = [];
-
-        readonly Dictionary<Guid, int> _index = [];
-
-        public Room[] Get(DateTimeOffset since, DateTimeOffset until)
-        {
-            var items = CollectionsMarshal.AsSpan(_items);
-            var idxStart = BinarySearch.LowerBound<Room, DateTimeOffset>(items, since, RoomsExtensions.CompareAvailableUntil);
-            if (idxStart == -1)
-            {
-                return [];
-            }
-            return items[idxStart..]
-                .AsValueEnumerable()
-                .Where(r => r.AvailableSince <= until)
-                .Order(RoomsExtensions.AvailableSinceComparer)
-                .ToArray();
-        }
-
-        public void Update(IEnumerable<Room> rooms, DateTimeOffset since)
-        {
-            var idx = BinarySearch.LowerBound<Room, DateTimeOffset>(CollectionsMarshal.AsSpan(_items), since, RoomsExtensions.CompareAvailableUntil);
-            if (idx == 0)
-            {
-                _items.Clear();
-            }
-            else if (idx > 0)
-            {
-                CollectionsMarshal.SetCount(_items, idx);
-            }
-
-            foreach (var r in rooms)
-            {
-                if (_index.Remove(r.Id, out var i))
-                {
-                    _items[i] = r;
-                }
-                else
-                {
-                    _items.Add(r);
-                }
-            }
-
-            _items.Sort(RoomsExtensions.CompareToAvailableUntil);
-            var items = CollectionsMarshal.AsSpan(_items);
-            for (var i = 0; i < items.Length; i++)
-            {
-                _index[items[i].Id] = i;
-            }
         }
     }
 
@@ -110,7 +70,6 @@ namespace RoomsCalendar.Server.Services
         public static Room ToRoom(this Knoq.Model.ResponseRoom room)
         {
             return new Room(
-                room.RoomId,
                 room.Place,
                 DateTimeOffset.Parse(room.TimeStart),
                 DateTimeOffset.Parse(room.TimeEnd)
