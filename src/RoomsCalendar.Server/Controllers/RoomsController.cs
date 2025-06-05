@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using RoomsCalendar.Server.Domain;
+using RoomsCalendar.Share.Domain;
 
 namespace RoomsCalendar.Server.Controllers
 {

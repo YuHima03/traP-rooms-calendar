@@ -1,5 +1,4 @@
-﻿using RoomsCalendar.Server.Domain;
-using RoomsCalendar.Share.Domain;
+﻿using RoomsCalendar.Share.Domain;
 using System.Runtime.InteropServices;
 using Yuh.Collections.Searching;
 using ZLinq;

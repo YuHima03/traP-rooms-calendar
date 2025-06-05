@@ -1,6 +1,4 @@
-﻿using RoomsCalendar.Share.Domain;
-
-namespace RoomsCalendar.Server.Domain
+﻿namespace RoomsCalendar.Share.Domain
 {
     public interface IRoomsProvider
     {

@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Options;
 using RoomsCalendar.Client;
 using RoomsCalendar.Server.Configurations;
-using RoomsCalendar.Server.Domain;
 using RoomsCalendar.Server.Services;
+using RoomsCalendar.Share.Domain;
 using Traq;
 
 namespace RoomsCalendar.Server
