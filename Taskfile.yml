@@ -1,0 +1,12 @@
+version: 3
+
+tasks:
+  tailwind-gen:
+    dir: ./src/RoomsCalendar.Client
+    cmds:
+      - npx @tailwindcss/cli -i "./Styles/app.css" -o "./wwwroot/css/app.css"
+
+  tailwind-watch:
+    dir: ./src/RoomsCalendar.Client
+    cmds:
+      - npx @tailwindcss/cli -i "./Styles/app.css" -o "./wwwroot/css/app.css" --watch
