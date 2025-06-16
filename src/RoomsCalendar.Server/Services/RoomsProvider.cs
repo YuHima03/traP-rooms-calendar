@@ -9,6 +9,8 @@ namespace RoomsCalendar.Server.Services
     {
         readonly List<Room> _rooms = [];
 
+        public DateTimeOffset LastUpdatedAt { get; private set; }
+
         public ValueTask<Room[]> GetRoomsAsync(DateTimeOffset since, DateTimeOffset until, CancellationToken ct)
         {
             lock (_rooms)
@@ -42,6 +44,7 @@ namespace RoomsCalendar.Server.Services
                 }
                 _rooms.AddRange(rooms);
                 _rooms.Sort(RoomsExtensions.CompareToAvailableUntil);
+                LastUpdatedAt = DateTimeOffset.UtcNow;
             }
             return ValueTask.CompletedTask;
         }

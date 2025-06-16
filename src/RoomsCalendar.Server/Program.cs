@@ -1,7 +1,6 @@
 using Knoq.Extensions.Authentication;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Options;
-using RoomsCalendar.Client;
 using RoomsCalendar.Server.Configurations;
 using RoomsCalendar.Server.Services;
 using RoomsCalendar.Share.Domain;
@@ -91,7 +90,7 @@ namespace RoomsCalendar.Server
             app.UseAuthorization();
 
             app.MapStaticAssets();
-            app.MapRazorComponents<App>()
+            app.MapRazorComponents<Client.App>()
                 .AddInteractiveWebAssemblyRenderMode();
             app.MapControllers();
 

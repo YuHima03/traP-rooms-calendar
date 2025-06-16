@@ -2,49 +2,107 @@
 @inject IServiceProvider Services
 @inject RoomsCalendar.Share.Domain.IRoomsProvider RoomsProvider
 
-<PageTitle>進捗部屋カレンダー</PageTitle>
+<PageTitle>進捗部屋情報</PageTitle>
 
-<h2>今後の進捗部屋</h2>
+<div class="flex flex-col gap-y-4">
 
-<p>現状、2週間先まで表示しています。</p>
+    <h2>今後の進捗部屋</h2>
 
-<p>その他の期間の情報は <code>/api/rooms?since={}&amp;until={}</code> を使ってください。</p>
+    <p>1か月先まで表示されます。</p>
 
-@if (Rooms is null)
+    <p>その他の期間の情報は <code>/api/rooms?since={}&amp;until={}</code> を使ってください。</p>
+
+</div>
+
+@if (RoomsProvider.LastUpdatedAt == default)
 {
-    <p>読み込み中......</p>
-}
-else if (!Rooms.Any())
-{
-    <p>情報がありません。</p>
+    <AlertCard Type="AlertCard.AlertType.Information"
+               Title="部屋情報がありません">
+        <p>
+            サーバーの起動直後は部屋情報が表示されません。
+            時間を空けてもう一度アクセスしてください。
+        </p>
+    </AlertCard>
 }
 else
 {
-    @foreach (var g in Rooms)
+    <div class="flex flex-row gap-4 flex-wrap">
+        <span class="tx-body-strong text-inherit">
+            最終更新
+        </span>
+        <span>
+            @($"{RoomsProvider.LastUpdatedAt.ToOffset(TimeSpan.FromHours(9)).DateTime:yyyy/MM/dd HH:mm}") (JST)
+        </span>
+    </div>
+}
+
+@if (GroupedRooms is null)
+{
+    <p>読み込み中......</p>
+}
+else if (!GroupedRooms.Any() && RoomsProvider.LastUpdatedAt != default)
+{
+    <p>部屋情報がありません。</p>
+}
+else
+{
+    @foreach (var (date, rooms) in GroupedRooms)
     {
-        <h3>@g.Key.ToString("yyyy/MM/dd ddd")</h3>
-        <ul>
-            @foreach (var r in g)
-            {
-                <li><strong>@r.PlaceName</strong> (@r.AvailableSince.UtcDateTime.AddHours(9).ToString("HH:mm") ~ @(r.AvailableUntil.UtcDateTime.AddHours(9).ToString(DateOnly.FromDateTime(r.AvailableUntil.UtcDateTime.AddHours(9)) != g.Key ? "yyyy/MM/dd HH:mm" : "HH:mm")))</li>
-            }
-        </ul>
+        <div class="flex flex-col gap-y-3
+                    md:flex-row md:flex-nowrap md:gap-x-4">
+
+            <div class="tx-body-strong w-[5rem] pt-2">
+                <h3>
+                    @{
+                        var diff = date.DayNumber - JstToday.DayNumber;
+                        if (diff == 0)
+                        {
+                            <span>今日</span>
+                        }
+                        else if (diff == 1)
+                        {
+                            <span>明日</span>
+                        }
+                        else
+                        {
+                            <span>@(string.Create(JapaneseCulture, $"{date:MM/dd (ddd)}"))</span>
+                        }
+                    }
+                </h3>
+            </div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-3 grow">
+                @foreach (var r in rooms)
+                {
+                    <RoomCard PlaceName="@r.Key"
+                              AvailableTimes="@([.. r.Select(v => (v.AvailableSince, v.AvailableUntil))])"
+                              OccupiedTimes="@([])" />
+                }
+            </div>
+
+        </div>
     }
 }
 
 @code {
-    public IEnumerable<IGrouping<DateOnly, Room>>? Rooms { get; private set; }
+    public IEnumerable<KeyValuePair<DateOnly, IEnumerable<IGrouping<string, Room>>>>? GroupedRooms { get; private set; }
+
+    static DateOnly JstToday => DateOnly.FromDateTime(DateTime.UtcNow.AddHours(9).Date);
+
+    readonly static System.Globalization.CultureInfo JapaneseCulture = new("ja-JP", false);
 
     protected override async Task OnInitializedAsync()
     {
         var since = DateTime.UtcNow.AddHours(9).Date.AddHours(-9);
-        var until = since.AddDays(14).AddTicks(-1);
+        var until = since.AddDays(31).AddTicks(-1);
 
         var rooms = await RoomsProvider.GetRoomsAsync(since, until, CancellationToken.None);
         if (rooms is not null)
         {
-            Rooms = rooms
-                .GroupBy(r => DateOnly.FromDateTime(r.AvailableSince.UtcDateTime.AddHours(9)))
+            GroupedRooms = rooms
+                .GroupBy(
+                    r => DateOnly.FromDateTime(r.AvailableSince.ToOffset(TimeSpan.FromHours(9)).Date), // JST Date
+                    (key, rs) => KeyValuePair.Create(key, rs.GroupBy(r => r.PlaceName, StringComparer.OrdinalIgnoreCase))
+                )
                 .OrderBy(g => g.Key);
         }
     }

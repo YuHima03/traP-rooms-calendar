@@ -1,0 +1,55 @@
+﻿@if (Type == AlertType.Information)
+{
+    <div class="flex flex-col gap-y-4 p-4 rounded-xl text-note-primary bg-note-primary border-1 border-default-secondary">
+        @if (!string.IsNullOrEmpty(Title))
+        {
+            <div class="flex flex-row flex-nowrap gap-x-2 items-center">
+                <span class="material-symbols-rounded font-base!">
+                    info
+                </span>
+                <h3 class="tx-body-strong text-inherit">
+                    @Title
+                </h3>
+            </div>
+        }
+        <div class="flex flex-col gap-y-3">
+            @ChildContent
+        </div>
+    </div>
+}
+else if (Type == AlertType.Success)
+{
+    <div class="grow flex flex-col gap-y-4 p-4 rounded-xl text-success-primary bg-success-primary border-1 border-default-secondary">
+        @if (!string.IsNullOrEmpty(Title))
+        {
+            <div class="flex flex-row flex-nowrap gap-x-2 items-center">
+                <span class="material-symbols-rounded font-base!">
+                    check_circle
+                </span>
+                <h3 class="tx-body-strong text-inherit">
+                    @Title
+                </h3>
+            </div>
+        }
+        <div class="flex flex-col gap-y-3">
+            @ChildContent
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string? Title { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public required RenderFragment ChildContent { get; set; }
+
+    [Parameter]
+    public AlertType Type { get; set; } = AlertType.Information;
+
+    public enum AlertType : byte
+    {
+        Information, Note, Success, Tips, Warning, Alert
+    }
+}

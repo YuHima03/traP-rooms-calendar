@@ -1,0 +1,145 @@
+﻿@using DateTimePeriod = (DateTimeOffset Since, DateTimeOffset Until)
+
+<div class="p-3 flex flex-col gap-y-2 border-1 border-default-secondary rounded-xl
+            [&[isavailable]]:border-2 [&[isavailable]]:border-teal-400
+            [&[isclosed]]:bg-default-tertiary [&[isclosed]]:text-default-tertiary [&[isclosed]]:border-default-primary"
+     @attributes="@InnerAttributes">
+    <div class="flex flex-row flex-wrap gap-2">
+        <span class="grow tx-body-strong truncate text-inherit">
+            @PlaceName
+        </span>
+        @if (IsOccupiedNow)
+        {
+            <span class="flex flex-row flex-nowrap gap-x-1 items-center tx-body2-strong text-dangerous-primary">
+                <span class="material-symbols-rounded text-sm!">
+                    do_not_disturb_on
+                </span>
+                占有中
+            </span>
+        }
+        else if (IsAvailableNow)
+        {
+            <span class="tx-body2-strong text-teal-600">
+                <span class="material-symbols-rounded text-sm!">
+                    check_circle
+                </span>
+                現在利用可
+            </span>
+        }
+    </div>
+    <div class="flex flex-row flex-wrap gap-2 text-inherit">
+        @for (int i = 0; i < AvailableTimes.Length; i++)
+        {
+            if (i != 0)
+            {
+                <span>,</span>
+            }
+
+            var t = AvailableTimes[i];
+            <span class="tx-body text-default-secondary text-inherit">
+                @if (t.Until.Subtract(t.Since) < TimeSpan.FromDays(1))
+                {
+                    @($"{t.Since:HH:mm} ~ {t.Until:HH:mm}")
+                }
+                else
+                {
+                    @($"{t.Since:HH:mm} ~ {t.Until:MM/dd HH:mm}")
+                }
+            </span>
+        }
+    </div>
+    @if (IsOccupiedNow)
+    {
+        <span class="tx-body2 text-default-secondary">
+            現在イベントによって占有されています。
+        </span>
+    }
+    else if (IsClosedToday)
+    {
+        <span class="tx-body2 text-default-secondary">
+            本日の利用可能時間は終了しました。
+        </span>
+    }
+
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public required string PlaceName { get; set; }
+
+    /// <summary>
+    /// 部屋が利用可能な時間帯.
+    /// </summary>
+    /// <remarks>
+    /// 全ての期間が重複していないことを前提に処理が進む.
+    /// </remarks>
+    [Parameter]
+    [EditorRequired]
+    public required DateTimePeriod[] AvailableTimes { get; set; }
+
+    /// <summary>
+    /// 部屋が占有されている時間帯.
+    /// </summary>
+    /// <remarks>
+    /// 全ての期間が重複していないことを前提に処理が進む.
+    /// </remarks>
+    [Parameter]
+    public required DateTimePeriod[] OccupiedTimes { get; set; } = [];
+
+    /// <summary>
+    /// 部屋が現在使用可能かどうか.
+    /// </summary>
+    /// <remarks>
+    /// 占有されているかどうかは考慮されない.
+    /// </remarks>
+    bool IsAvailableNow = true;
+
+    /// <summary>
+    /// 部屋の利用可能時間外かどうか.
+    /// </summary>
+    /// <remarks>
+    /// 現在以降に利用可能時間がある場合は, 現在利用不可でも <see langword="false" /> になる.
+    /// </remarks>
+    bool IsClosedToday = false;
+
+    /// <summary>
+    /// 部屋が現在占有されているかどうか.
+    /// </summary>
+    bool IsOccupiedNow = false;
+
+    IEnumerable<KeyValuePair<string, object>> InnerAttributes
+    {
+        get
+        {
+            if (IsAvailableNow)
+            {
+                yield return KeyValuePair.Create("isavailable", (object)string.Empty);
+            }
+            if (IsClosedToday)
+            {
+                yield return KeyValuePair.Create("isclosed", (object)string.Empty);
+            }
+            yield break;
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        var availableTimes = AvailableTimes.AsSpan();
+        availableTimes.Sort((x, y) => x.Since.CompareTo(y.Since));
+        var utcNow = DateTimeOffset.UtcNow;
+
+        IsClosedToday = availableTimes.Length != 0 && availableTimes[^1].Until < utcNow;
+
+        var i = Yuh.Collections.Searching.BinarySearch.LowerBound<DateTimePeriod, DateTimeOffset>(availableTimes, utcNow, (x, y) => x.Since.CompareTo(y));
+        IsAvailableNow = 0 <= i && availableTimes[i].Since <= utcNow && utcNow <= availableTimes[i].Until;
+
+        var occupiedTimes = OccupiedTimes.AsSpan();
+        occupiedTimes.Sort((x, y) => x.Since.CompareTo(y.Since));
+        var j = Yuh.Collections.Searching.BinarySearch.LowerBound<DateTimePeriod, DateTimeOffset>(occupiedTimes, utcNow, (x, y) => x.Since.CompareTo(y));
+        IsOccupiedNow = 0 <= j && occupiedTimes[i].Since <= utcNow && utcNow <= occupiedTimes[j].Until;
+    }
+}

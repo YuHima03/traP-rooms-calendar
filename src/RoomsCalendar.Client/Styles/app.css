@@ -104,17 +104,28 @@
     --color-tx-default-primary: var(--color-black);
     --color-tx-default-secondary: var(--color-gray-7);
     --color-tx-default-tertiary: var(--color-gray-5);
+    --color-tx-note-primary: var(--color-blue-6);
+    --color-tx-success-primary: var(--color-green-6);
+    --color-tx-warning-primary: var(--color-yellow-6);
+    --color-tx-dangerous-primary: var(--color-red-6);
     /*
     Background
     */
     --color-bg-default-primary: var(--color-white);
     --color-bg-default-secondary: var(--color-gray-0);
     --color-bg-default-tertiary: var(--color-gray-1);
+    --color-bg-note-primary: var(--color-blue-0);
+    --color-bg-success-primary: var(--color-green-0);
+    --color-bg-warning-primary: var(--color-yellow-0);
+    --color-bg-dangerous-primary: var(--color-red-0);
     /*
     Border
     */
     --color-bd-default-primary: var(--color-gray-3);
     --color-bd-default-secondary: var(--color-gray-2);
+    --color-bd-note-primary: var(--color-blue-5);
+    --color-bd-success-primary: var(--color-green-5);
+    --color-bd-dangerous-primary: var(--color-red-5);
 }
 
 @theme {
@@ -122,12 +133,49 @@
     --font-mono: "SFMono", "Consolas", ui-monospace, monospace;
 }
 
-@layer components {
-    .tx-body {
-        @apply font-normal font-sans leading-5 text-base text-tx-default-primary;
-    }
+@utility tx-h1 {
+    @apply font-bold font-sans leading-8 text-2xl text-default-primary;
+}
+@utility tx-h2 {
+    @apply font-semibold font-sans leading-6 text-xl text-default-primary;
+}
+@utility tx-body {
+    @apply font-normal font-sans leading-5 text-base text-default-primary;
+}
+@utility tx-body-strong {
+    @apply font-bold font-sans leading-5 text-base text-default-primary;
+}
+@utility tx-button {
+    @apply font-medium font-sans leading-5 text-base text-default-primary;
+}
+@utility tx-body2 {
+    @apply font-normal font-sans leading-5 text-sm text-default-primary;
+}
+@utility tx-body2-strong {
+    @apply font-bold font-sans leading-5 text-sm text-default-primary;
+}
+@utility tx-caption {
+    @apply font-medium font-sans leading-4 text-xs text-default-primary;
 }
 
-:root {
-    
+@utility text-* {
+    color: --value(--color-tx-*);
+}
+@utility bg-* {
+    background-color: --value(--color-bg-*);
+}
+@utility border-* {
+    border-color: --value(--color-bd-*);
+}
+
+@layer base {
+    :root {
+        @apply tx-body;
+    }
+    h1 {
+        @apply tx-h1;
+    }
+    h2 {
+        @apply tx-h2;
+    }
 }
