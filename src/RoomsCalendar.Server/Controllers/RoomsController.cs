@@ -8,7 +8,9 @@ namespace RoomsCalendar.Server.Controllers
     public class RoomsController : ControllerBase
     {
         [HttpGet]
-        public async Task<IActionResult> IndexAsync(
+        [ProducesResponseType<Room[]>(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<Room[]>> IndexAsync(
             [FromServices] IRoomsProvider roomsProvider,
             [FromQuery(Name = "since")] DateTimeOffset? since = null,
             [FromQuery(Name = "until")] DateTimeOffset? until = null)
