@@ -134,12 +134,12 @@
 
         IsClosedToday = availableTimes.Length != 0 && availableTimes[^1].Until < utcNow;
 
-        var i = Yuh.Collections.Searching.BinarySearch.LowerBound<DateTimePeriod, DateTimeOffset>(availableTimes, utcNow, (x, y) => x.Since.CompareTo(y));
+        var i = Yuh.Collections.Searching.BinarySearch.LowerBound<DateTimePeriod, DateTimeOffset>(availableTimes, utcNow, (x, y) => y.CompareTo(x.Since));
         IsAvailableNow = 0 <= i && availableTimes[i].Since <= utcNow && utcNow <= availableTimes[i].Until;
 
         var occupiedTimes = OccupiedTimes.AsSpan();
         occupiedTimes.Sort((x, y) => x.Since.CompareTo(y.Since));
-        var j = Yuh.Collections.Searching.BinarySearch.LowerBound<DateTimePeriod, DateTimeOffset>(occupiedTimes, utcNow, (x, y) => x.Since.CompareTo(y));
+        var j = Yuh.Collections.Searching.BinarySearch.LowerBound<DateTimePeriod, DateTimeOffset>(occupiedTimes, utcNow, (x, y) => y.CompareTo(x.Since));
         IsOccupiedNow = 0 <= j && occupiedTimes[i].Since <= utcNow && utcNow <= occupiedTimes[j].Until;
     }
 }
