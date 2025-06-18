@@ -30,10 +30,7 @@ namespace RoomsCalendar.Server
             {
                 var services = builder.Services;
 
-                if (TimeZoneInfo.TryFindSystemTimeZoneById(builder.Configuration["TimeZone:Id"] ?? string.Empty, out var tzi))
-                {
-                    services.AddSingleton(tzi);
-                }
+                services.AddSingleton(TimeZoneInfo.FindSystemTimeZoneById("Tokyo Standard Time"));
 
                 services.Configure<KnoqClientOptions>(builder.Configuration);
                 services.Configure<TraqClientOptions>(builder.Configuration);
@@ -59,8 +56,10 @@ namespace RoomsCalendar.Server
                     }
                 );
 
-                services.AddHostedService<RoomsCollector>();
-                services.AddSingleton<IRoomsProvider, RoomsProvider>();
+                services.AddHostedService<RoomsAndEventsCollector>();
+                services.AddSingleton<RoomsAndEventsProvider>();
+                services.AddSingleton<IRoomsProvider>(sp => sp.GetRequiredService<RoomsAndEventsProvider>());
+                services.AddSingleton<IEventsProvider>(sp => sp.GetRequiredService<RoomsAndEventsProvider>());
 
                 services.AddScoped(sp => new HttpClient { BaseAddress = new(sp.GetRequiredService<NavigationManager>().BaseUri) });
             }
