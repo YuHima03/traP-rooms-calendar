@@ -2,13 +2,14 @@
 
 <div class="p-3 flex flex-col gap-y-2 border-1 border-default-secondary rounded-xl
             [&[isavailable]]:border-2 [&[isavailable]]:border-teal-400
+            [&[isoccupied]]:border-2 [&[isoccupied]]:border-dangerous-primary
             [&[isclosed]]:bg-default-tertiary [&[isclosed]]:text-default-tertiary [&[isclosed]]:border-default-primary"
      @attributes="@InnerAttributes">
     <div class="flex flex-row flex-wrap gap-2">
         <span class="grow tx-body-strong truncate text-inherit">
             @PlaceName
         </span>
-        @if (IsOccupiedNow)
+        @if (OccupyingEventNow is not null)
         {
             <span class="flex flex-row flex-nowrap gap-x-1 items-center tx-body2-strong text-dangerous-primary">
                 <span class="material-symbols-rounded text-sm!">
@@ -48,10 +49,19 @@
             </span>
         }
     </div>
-    @if (IsOccupiedNow)
+    @if (OccupyingEventNow is not null)
     {
         <span class="tx-body2 text-default-secondary">
-            現在イベントによって占有されています。
+            現在
+            <a href="@($"https://knoq.trap.jp/events/{OccupyingEventNow.Id}")"
+               target="_blank"
+               class="font-medium text-note-primary text-balance underline hover:no-underline">
+                @(OccupyingEventNow.Name)
+                <span class="material-symbols-rounded text-sm!">
+                    open_in_new
+                </span>
+            </a>
+            によって占有されています。
         </span>
     }
     else if (IsClosedToday)
@@ -79,13 +89,13 @@
     public required DateTimePeriod[] AvailableTimes { get; set; }
 
     /// <summary>
-    /// 部屋が占有されている時間帯.
+    /// 部屋を占有するイベント一覧.
     /// </summary>
     /// <remarks>
-    /// 全ての期間が重複していないことを前提に処理が進む.
+    /// 占有する時間帯に重複が無いことを前提に処理が進む.
     /// </remarks>
     [Parameter]
-    public required DateTimePeriod[] OccupiedTimes { get; set; } = [];
+    public required Event[] OccupyingEvents { get; set; } = [];
 
     /// <summary>
     /// 部屋が現在使用可能かどうか.
@@ -104,19 +114,23 @@
     bool IsClosedToday = false;
 
     /// <summary>
-    /// 部屋が現在占有されているかどうか.
+    /// 部屋を現在占有しているイベント.
     /// </summary>
-    bool IsOccupiedNow = false;
+    Event? OccupyingEventNow = null;
 
     IEnumerable<KeyValuePair<string, object>> InnerAttributes
     {
         get
         {
-            if (IsAvailableNow)
+            if (OccupyingEventNow is not null)
+            {
+                yield return KeyValuePair.Create("isoccupied", (object)string.Empty);
+            }
+            else if (IsAvailableNow)
             {
                 yield return KeyValuePair.Create("isavailable", (object)string.Empty);
             }
-            if (IsClosedToday)
+            else if (IsClosedToday)
             {
                 yield return KeyValuePair.Create("isclosed", (object)string.Empty);
             }
@@ -137,9 +151,9 @@
         var i = Yuh.Collections.Searching.BinarySearch.LowerBound<DateTimePeriod, DateTimeOffset>(availableTimes, utcNow, (x, y) => y.CompareTo(x.Since));
         IsAvailableNow = 0 <= i && availableTimes[i].Since <= utcNow && utcNow <= availableTimes[i].Until;
 
-        var occupiedTimes = OccupiedTimes.AsSpan();
-        occupiedTimes.Sort((x, y) => x.Since.CompareTo(y.Since));
-        var j = Yuh.Collections.Searching.BinarySearch.LowerBound<DateTimePeriod, DateTimeOffset>(occupiedTimes, utcNow, (x, y) => y.CompareTo(x.Since));
-        IsOccupiedNow = 0 <= j && occupiedTimes[i].Since <= utcNow && utcNow <= occupiedTimes[j].Until;
+        var events = OccupyingEvents.AsSpan();
+        events.Sort((x, y) => x.StartsAt.CompareTo(y.StartsAt));
+        var j = Yuh.Collections.Searching.BinarySearch.LowerBound<Event, DateTimeOffset>(events, utcNow, (x, y) => y.CompareTo(x.StartsAt));
+        OccupyingEventNow = (0 <= j && events[j].StartsAt <= utcNow && utcNow <= events[j].EndsAt) ? events[j] : null;
     }
 }
