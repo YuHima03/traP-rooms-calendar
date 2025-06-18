@@ -3,9 +3,10 @@ using RoomsCalendar.Share.Domain;
 
 namespace RoomsCalendar.Server.Services
 {
-    sealed class RoomsCollector(
+    sealed class RoomsAndEventsCollector(
         IKnoqApiClient knoq,
-        ILogger<RoomsCollector> logger,
+        ILogger<RoomsAndEventsCollector> logger,
+        IEventsProvider eventsProvider,
         IRoomsProvider roomsProvider,
         TimeZoneInfo? timeZoneInfo = null
         ) : BackgroundService
@@ -21,36 +22,15 @@ namespace RoomsCalendar.Server.Services
             {
                 try
                 {
-                    var utcNow = DateTimeOffset.UtcNow;
-                    List<Knoq.Model.ResponseRoom> rooms;
-
-                    DateTimeOffset since = DateTimeOffset.MinValue;
-                    if (utcNow - lastFullCollection < TimeSpan.FromDays(1))
+                    var fullCollection = DateTimeOffset.UtcNow.Subtract(lastFullCollection) > TimeSpan.FromDays(1);
+                    await Task.WhenAll(
+                        CollectAndUpdateRoomsAsync(fullCollection, stoppingToken),
+                        CollectAndUpdateEventsAsync(fullCollection, stoppingToken)
+                    );
+                    if (fullCollection)
                     {
-                        since = TimeZoneInfo.ConvertTimeToUtc(
-                            TimeZoneInfo.ConvertTimeFromUtc(utcNow.UtcDateTime, _timeZoneInfo).Date,
-                            _timeZoneInfo
-                        );
+                        lastFullCollection = DateTimeOffset.UtcNow;
                     }
-                    else
-                    {
-                        lastFullCollection = utcNow;
-                    }
-
-                        rooms = await knoq.RoomsApi.GetRoomsAsync(dateBegin: since.ToString("O"), cancellationToken: stoppingToken);
-
-                    var filterd = rooms
-                        .Where(r => r.Verified)
-                        .Select(InternalExtensions.KnoqResponseToRoom)
-                        .GroupBy(r => r.Place)
-                        .Select(g => g
-                            .OrderBy(r => r.StartsAt)
-                            .DistinctByTime())
-                        .SelectMany(g => g
-                            .UnionContiguous()
-                            .Select(InternalExtensions.KnoqRoomToDomainRoom));
-
-                    await roomsProvider.UpdateRoomsAsync(filterd, since, stoppingToken);
                 }
                 catch (OperationCanceledException)
                 {
@@ -62,6 +42,48 @@ namespace RoomsCalendar.Server.Services
                 }
             }
             while (await timer.WaitForNextTickAsync(stoppingToken));
+        }
+
+        async Task CollectAndUpdateEventsAsync(bool fullCollection, CancellationToken ct)
+        {
+            var utcNow = DateTimeOffset.UtcNow;
+            var since = GetSearchSinceUtc(fullCollection);
+            var events = await knoq.EventsApi.GetEventsAsync(dateBegin: since.ToString("O"), cancellationToken: ct);
+            await eventsProvider.UpdateEventsAsync(events.Select(InternalExtensions.KnoqResponseToDomainEvent), since, ct);
+        }
+
+        async Task CollectAndUpdateRoomsAsync(bool fullCollection, CancellationToken ct)
+        {
+            var utcNow = DateTimeOffset.UtcNow;
+            var since = GetSearchSinceUtc(fullCollection);
+            var rooms = await knoq.RoomsApi.GetRoomsAsync(dateBegin: since.ToString("O"), cancellationToken: ct);
+            var filterd = rooms
+                .Where(r => r.Verified)
+                .Select(InternalExtensions.KnoqResponseToRoom)
+                .GroupBy(r => r.Place)
+                .Select(g => g
+                    .OrderBy(r => r.StartsAt)
+                    .DistinctByTime())
+                .SelectMany(g => g
+                    .UnionContiguous()
+                    .Select(InternalExtensions.KnoqRoomToDomainRoom));
+            await roomsProvider.UpdateRoomsAsync(filterd, since, ct);
+        }
+
+        DateTimeOffset GetSearchSinceUtc(bool fullCollection)
+        {
+            if (fullCollection)
+            {
+                return DateTimeOffset.MinValue;
+            }
+            else
+            {
+                var utcNow = DateTimeOffset.UtcNow;
+                return TimeZoneInfo.ConvertTimeToUtc(
+                    TimeZoneInfo.ConvertTimeFromUtc(utcNow.UtcDateTime, _timeZoneInfo).Date,
+                    _timeZoneInfo
+                );
+            }
         }
     }
 
@@ -152,6 +174,18 @@ namespace RoomsCalendar.Server.Services
             }
             yield return accumulated;
             yield break;
+        }
+
+        public static Event KnoqResponseToDomainEvent(this Knoq.Model.ResponseEvent ev)
+        {
+            return new Event(
+                ev.EventId,
+                ev.Name,
+                ev.Place,
+                DateTimeOffset.Parse(ev.TimeStart),
+                DateTimeOffset.Parse(ev.TimeEnd),
+                !ev.SharedRoom
+            );
         }
 
         public static KnoqRoom KnoqResponseToRoom(this Knoq.Model.ResponseRoom room)
