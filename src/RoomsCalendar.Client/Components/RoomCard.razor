@@ -9,7 +9,7 @@
         <span class="grow tx-body-strong truncate text-inherit">
             @PlaceName
         </span>
-        @if (OccupyingEventNow is not null)
+        @if (IsOccupiedNow)
         {
             <span class="flex flex-row flex-nowrap gap-x-1 items-center tx-body2-strong text-dangerous-primary">
                 <span class="material-symbols-rounded text-sm!">
@@ -49,28 +49,33 @@
             </span>
         }
     </div>
-    @if (OccupyingEventNow is not null)
-    {
-        <span class="tx-body2 text-default-secondary">
-            現在
-            <a href="@($"https://knoq.trap.jp/events/{OccupyingEventNow.Id}")"
-               target="_blank"
-               class="font-medium text-note-primary text-balance underline hover:no-underline">
-                @(OccupyingEventNow.Name)
-                <span class="material-symbols-rounded text-sm!">
-                    open_in_new
-                </span>
-            </a>
-            によって占有されています。
-        </span>
-    }
-    else if (IsClosedToday)
+    @if (IsClosedToday)
     {
         <span class="tx-body2 text-default-secondary">
             本日の利用可能時間は終了しました。
         </span>
     }
-
+    else if (HeldEventNow.Length != 0)
+    {
+        <div class="tx-body2 text-default-secondary flex flex-row flex-nowrap gap-x-2">
+            <div class="shrink-0">
+                開催中:
+            </div>
+            <div class="flex flex-col gap-y-1">
+                @foreach (var e in HeldEventNow)
+                {
+                    <a href="@($"https://knoq.trap.jp/events/{e.Id}")"
+                       target="_blank"
+                       class="font-medium text-note-primary text-balance underline hover:no-underline">
+                        @(e.Name)
+                        <span class="material-symbols-rounded text-sm!">
+                            open_in_new
+                        </span>
+                    </a>
+                }
+            </div>
+        </div>
+    }
 </div>
 
 @code {
@@ -113,16 +118,15 @@
     /// </remarks>
     bool IsClosedToday = false;
 
-    /// <summary>
-    /// 部屋を現在占有しているイベント.
-    /// </summary>
-    Event? OccupyingEventNow = null;
+    bool IsOccupiedNow => HeldEventNow.Length == 1 && HeldEventNow[0].OccupiesRoom;
+
+    Event[] HeldEventNow = [];
 
     IEnumerable<KeyValuePair<string, object>> InnerAttributes
     {
         get
         {
-            if (OccupyingEventNow is not null)
+            if (IsOccupiedNow)
             {
                 yield return KeyValuePair.Create("isoccupied", (object)string.Empty);
             }
@@ -151,9 +155,6 @@
         var i = Yuh.Collections.Searching.BinarySearch.LowerBound<DateTimePeriod, DateTimeOffset>(availableTimes, utcNow, (x, y) => y.CompareTo(x.Since));
         IsAvailableNow = 0 <= i && availableTimes[i].Since <= utcNow && utcNow <= availableTimes[i].Until;
 
-        var events = Events.AsSpan();
-        events.Sort((x, y) => x.StartsAt.CompareTo(y.StartsAt));
-        var j = Yuh.Collections.Searching.BinarySearch.LowerBound<Event, DateTimeOffset>(events, utcNow, (x, y) => y.CompareTo(x.StartsAt));
-        OccupyingEventNow = (0 <= j && events[j].StartsAt <= utcNow && utcNow <= events[j].EndsAt) ? events[j] : null;
+        HeldEventNow = [.. Events.Where(e => e.StartsAt <= utcNow && utcNow <= e.EndsAt)];
     }
 }
