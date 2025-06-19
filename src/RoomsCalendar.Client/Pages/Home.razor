@@ -77,7 +77,7 @@ else
                 {
                     <RoomCard PlaceName="@r.Key"
                               AvailableTimes="@([.. r.Value.Select(v => (v.Room.AvailableSince, v.Room.AvailableUntil))])"
-                              OccupyingEvents="@([.. r.Value.SelectMany(v => v.HeldEvents.Where(e => e.OccupiesRoom))])" />
+                              Events="@([.. r.Value.SelectMany(v => v.HeldEvents.Where(e => e.OccupiesRoom))])" />
                 }
             </div>
 

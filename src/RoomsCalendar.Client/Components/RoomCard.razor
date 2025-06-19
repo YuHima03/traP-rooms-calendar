@@ -89,13 +89,13 @@
     public required DateTimePeriod[] AvailableTimes { get; set; }
 
     /// <summary>
-    /// 部屋を占有するイベント一覧.
+    /// 部屋で開催されるイベント一覧.
     /// </summary>
     /// <remarks>
     /// 占有する時間帯に重複が無いことを前提に処理が進む.
     /// </remarks>
     [Parameter]
-    public required Event[] OccupyingEvents { get; set; } = [];
+    public required Event[] Events { get; set; } = [];
 
     /// <summary>
     /// 部屋が現在使用可能かどうか.
@@ -151,7 +151,7 @@
         var i = Yuh.Collections.Searching.BinarySearch.LowerBound<DateTimePeriod, DateTimeOffset>(availableTimes, utcNow, (x, y) => y.CompareTo(x.Since));
         IsAvailableNow = 0 <= i && availableTimes[i].Since <= utcNow && utcNow <= availableTimes[i].Until;
 
-        var events = OccupyingEvents.AsSpan();
+        var events = Events.AsSpan();
         events.Sort((x, y) => x.StartsAt.CompareTo(y.StartsAt));
         var j = Yuh.Collections.Searching.BinarySearch.LowerBound<Event, DateTimeOffset>(events, utcNow, (x, y) => y.CompareTo(x.StartsAt));
         OccupyingEventNow = (0 <= j && events[j].StartsAt <= utcNow && utcNow <= events[j].EndsAt) ? events[j] : null;
