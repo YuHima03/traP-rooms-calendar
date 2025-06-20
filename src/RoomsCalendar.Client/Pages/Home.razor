@@ -109,7 +109,7 @@ else
                             {
                                 Room = r,
                                 HeldEvents = (await EventsProvider.GetEventsAsync(r.AvailableSince, r.AvailableUntil, CancellationToken.None))
-                                    .Where(e => e.PlaceName.Equals(r.PlaceName, StringComparison.OrdinalIgnoreCase) && e.OccupiesRoom)
+                                    .Where(e => e.PlaceName.Equals(r.PlaceName, StringComparison.OrdinalIgnoreCase))
                             })
                             .ToBlockingEnumerable()
                     ))
