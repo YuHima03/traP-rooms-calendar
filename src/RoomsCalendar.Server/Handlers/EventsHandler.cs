@@ -7,7 +7,7 @@ namespace RoomsCalendar.Server.Handlers
     public class EventsHandler
     {
         [HttpGet]
-        [ProducesResponseType<Room[]>(StatusCodes.Status200OK)]
+        [ProducesResponseType<Event[]>(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         async ValueTask<Results<Ok<Event[]>, BadRequest<string>>> GetEventsAsync(
             HttpContext ctx,
