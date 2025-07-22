@@ -36,6 +36,10 @@ namespace RoomsCalendar.Server.Services
                 {
                     break;
                 }
+                catch (Knoq.Client.ApiException ex) when (ex.ErrorCode == StatusCodes.Status401Unauthorized)
+                {
+                    logger.LogWarning("Access token is invalid or expired.");
+                }
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "An error occurred while collecting rooms.");
