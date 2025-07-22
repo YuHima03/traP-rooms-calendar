@@ -91,7 +91,9 @@ namespace RoomsCalendar.Server
             app.MapStaticAssets();
             app.MapRazorComponents<Client.App>()
                 .AddInteractiveWebAssemblyRenderMode();
-            app.MapControllers();
+
+            var handler = new Handlers.Handler();
+            handler.MapHandlers(app);
 
             app.Run();
         }
