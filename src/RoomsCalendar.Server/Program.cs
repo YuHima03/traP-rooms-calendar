@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Options;
 using RoomsCalendar.Server.Configurations;
 using RoomsCalendar.Server.Services;
+using RoomsCalendar.Share;
 using RoomsCalendar.Share.Domain;
 using Traq;
 
@@ -30,6 +31,8 @@ namespace RoomsCalendar.Server
             {
                 var services = builder.Services;
 
+                services.AddHttpClient();
+
                 services.AddSingleton(TimeZoneInfo.FindSystemTimeZoneById("Tokyo Standard Time"));
 
                 services.Configure<KnoqClientOptions>(builder.Configuration);
@@ -56,10 +59,21 @@ namespace RoomsCalendar.Server
                     }
                 );
 
-                services.AddHostedService<RoomsAndEventsCollector>();
-                services.AddSingleton<RoomsAndEventsProvider>();
-                services.AddSingleton<IRoomsProvider>(sp => sp.GetRequiredService<RoomsAndEventsProvider>());
-                services.AddSingleton<IEventsProvider>(sp => sp.GetRequiredService<RoomsAndEventsProvider>());
+                services
+                    .AddHostedService<RoomsAndEventsCollector>()
+                    .AddSingleton<RoomsAndEventsProvider>()
+                    .AddSingleton(sp => sp.GetRequiredService<RoomsAndEventsProvider>() as IEventsProvider)
+                    .AddKeyedSingleton<IRoomsProvider, RoomsAndEventsProvider>(ProviderNames.Knoq, (sp, _) => sp.GetRequiredService<RoomsAndEventsProvider>());
+                services
+                    .Configure<TitechRoomsCollectorConfiguration>(builder.Configuration)
+                    .AddSingleton<IConfigureOptions<TitechRoomsCollectorOptions>>(sp =>
+                    {
+                        var config = sp.GetRequiredService<IOptions<TitechRoomsCollectorConfiguration>>().Value;
+                        return new ConfigureNamedOptions<TitechRoomsCollectorOptions>(Options.DefaultName, o => config.ConfigureTitechRoomsCollectorOptions(o, sp.GetService<TimeZoneInfo>()));
+                    })
+                    .AddHostedService<TitechRoomsCollector>()
+                    .AddSingleton<TitechRoomsProvider>()
+                    .AddKeyedSingleton<IRoomsProvider, TitechRoomsProvider>(ProviderNames.Titech, (sp, _) => sp.GetRequiredService<TitechRoomsProvider>());
 
                 services.AddScoped(sp => new HttpClient { BaseAddress = new(sp.GetRequiredService<NavigationManager>().BaseUri) });
             }

@@ -6,8 +6,7 @@ namespace RoomsCalendar.Server.Services
     sealed class RoomsAndEventsCollector(
         IKnoqApiClient knoq,
         ILogger<RoomsAndEventsCollector> logger,
-        IEventsProvider eventsProvider,
-        IRoomsProvider roomsProvider,
+        RoomsAndEventsProvider dataProvider,
         TimeZoneInfo? timeZoneInfo = null
         ) : BackgroundService
     {
@@ -53,7 +52,7 @@ namespace RoomsCalendar.Server.Services
             var utcNow = DateTimeOffset.UtcNow;
             var since = GetSearchSinceUtc(fullCollection);
             var events = await knoq.EventsApi.GetEventsAsync(dateBegin: since.ToString("O"), cancellationToken: ct);
-            await eventsProvider.UpdateEventsAsync(events.Select(InternalExtensions.KnoqResponseToDomainEvent), since, ct);
+            await dataProvider.UpdateEventsAsync(events.Select(InternalExtensions.KnoqResponseToDomainEvent), since, ct);
         }
 
         async Task CollectAndUpdateRoomsAsync(bool fullCollection, CancellationToken ct)
@@ -71,7 +70,7 @@ namespace RoomsCalendar.Server.Services
                 .SelectMany(g => g
                     .UnionContiguous()
                     .Select(InternalExtensions.KnoqRoomToDomainRoom));
-            await roomsProvider.UpdateRoomsAsync(filterd, since, ct);
+            await dataProvider.UpdateRoomsAsync(filterd, since, ct);
         }
 
         DateTimeOffset GetSearchSinceUtc(bool fullCollection)
