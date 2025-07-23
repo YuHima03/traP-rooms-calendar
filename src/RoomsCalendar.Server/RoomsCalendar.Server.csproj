@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="AngleSharp" Version="1.3.0" />
+    <PackageReference Include="Ical.Net" Version="5.1.0" />
     <PackageReference Include="KnoqNet.Extensions.Authentication" Version="0.3.1" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.6" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.2" />
