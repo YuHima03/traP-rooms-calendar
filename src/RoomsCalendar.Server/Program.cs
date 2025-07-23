@@ -75,6 +75,8 @@ namespace RoomsCalendar.Server
                     .AddSingleton<TitechRoomsProvider>()
                     .AddKeyedSingleton<IRoomsProvider, TitechRoomsProvider>(ProviderNames.Titech, (sp, _) => sp.GetRequiredService<TitechRoomsProvider>());
 
+                services.AddSingleton<RoomsCalendarProvider>();
+
                 services.AddScoped(sp => new HttpClient { BaseAddress = new(sp.GetRequiredService<NavigationManager>().BaseUri) });
             }
 
