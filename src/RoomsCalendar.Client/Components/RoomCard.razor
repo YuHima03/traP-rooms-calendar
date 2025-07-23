@@ -76,6 +76,15 @@
             </div>
         </div>
     }
+    @if (!IsKnoqRegistered)
+    {
+        <span class="tx-body2 text-warning-primary font-medium">
+            <span class="material-symbols-rounded text-sm!">
+                warning
+            </span>
+            この進捗部屋は knoQ に登録されていません。
+        </span>
+    }
 </div>
 
 @code {
@@ -101,6 +110,12 @@
     /// </remarks>
     [Parameter]
     public required Event[] Events { get; set; } = [];
+
+    /// <summary>
+    /// この進捗部屋が knoQ に登録されているかどうか.
+    /// </summary>
+    [Parameter]
+    public required bool IsKnoqRegistered { get; set; }
 
     /// <summary>
     /// 部屋が現在使用可能かどうか.

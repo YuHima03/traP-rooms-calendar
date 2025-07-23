@@ -2,6 +2,8 @@
 {
     public interface IRoomsProvider
     {
+        public string ProviderName { get; }
+
         public DateTimeOffset LastUpdatedAt { get; }
 
         public ValueTask<Room[]> GetRoomsAsync(DateTimeOffset since, DateTimeOffset until, CancellationToken ct);
