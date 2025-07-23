@@ -74,7 +74,7 @@ namespace RoomsCalendar.Server.Services
             }
         }
 
-        protected override ValueTask InitializeCoreAsync(CancellationToken ct)
+        protected override async ValueTask InitializeCoreAsync(CancellationToken ct)
         {
             if (Uri.TryCreate(options.Value.SourceUrl, UriKind.Absolute, out var uri))
             {
@@ -84,7 +84,20 @@ namespace RoomsCalendar.Server.Services
             {
                 logger.LogWarning("Source URL is not set or invalid: {SourceUrl}", options.Value.SourceUrl);
             }
-            return ValueTask.CompletedTask;
+
+            if (options.Value.Delay > TimeSpan.FromMinutes(10))
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(20), ct);
+                    await ExecuteCoreAsync(ct);
+                }
+                catch (OperationCanceledException) { }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "An error occurred during the initial fetch of rooms data.");
+                }
+            }
         }
 
         async ValueTask<Room[]> ParseFetchResultAsync(Stream content, CancellationToken ct = default)

@@ -13,34 +13,27 @@ namespace RoomsCalendar.Server.Services
             try
             {
                 var optn = options.Value;
-                PeriodicTimer? timer = null;
                 await Task.WhenAll(
-                    Task.Delay(optn.Delay, stoppingToken).ContinueWith(_ => { timer = new(optn.Period); }, stoppingToken),
+                    Task.Delay(optn.Delay, stoppingToken),
                     InitializeCoreAsync(stoppingToken).AsTask()
                 );
-                if (timer is null)
+                using PeriodicTimer? timer = new(optn.Period);
+                do
                 {
-                    throw new Exception("Failed to initialize periodic timer.");
-                }
-                using (timer)
-                {
-                    do
+                    try
                     {
-                        try
-                        {
-                            await ExecuteCoreAsync(stoppingToken);
-                        }
-                        catch (Exception ex)
-                        {
-                            if (!optn.RecoverOnException)
-                            {
-                                throw;
-                            }
-                            logger.LogError(ex, "An error occurred while executing periodic background service.");
-                        }
+                        await ExecuteCoreAsync(stoppingToken);
                     }
-                    while (await timer.WaitForNextTickAsync(stoppingToken));
+                    catch (Exception ex)
+                    {
+                        if (!optn.RecoverOnException)
+                        {
+                            throw;
+                        }
+                        logger.LogError(ex, "An error occurred while executing periodic background service.");
+                    }
                 }
+                while (await timer.WaitForNextTickAsync(stoppingToken));
             }
             catch (OperationCanceledException)
             {
@@ -56,7 +49,9 @@ namespace RoomsCalendar.Server.Services
     interface IPeriodicBackgroundServiceOptions
     {
         TimeSpan Delay { get; }
+
         TimeSpan Period { get; }
+
         bool RecoverOnException { get; }
     }
 }
