@@ -9,7 +9,7 @@ namespace RoomsCalendar.Server.Services
     /// <summary>
     /// Provides room information fetched from Titech open data.
     /// </summary>
-    class TitechRoomsProvider : IRoomsProvider
+    sealed class TitechRoomsProvider : IRoomsProvider
     {
         readonly List<Room> _rooms = [];
 

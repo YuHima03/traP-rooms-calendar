@@ -5,7 +5,7 @@ using ZLinq;
 
 namespace RoomsCalendar.Server.Services
 {
-    class TitechRoomsCollector(
+    sealed class TitechRoomsCollector(
         TitechRoomsProvider dataProvider,
         IHttpClientFactory httpClientFactory,
         IOptions<TitechRoomsCollectorOptions> options,

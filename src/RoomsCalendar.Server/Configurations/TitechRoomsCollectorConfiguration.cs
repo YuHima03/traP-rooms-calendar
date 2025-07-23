@@ -2,7 +2,7 @@
 
 namespace RoomsCalendar.Server.Configurations
 {
-    class TitechRoomsCollectorConfiguration
+    sealed class TitechRoomsCollectorConfiguration
     {
         [ConfigurationKeyName("TITECH_ROOMS_SOURCE_ADDRESS")]
         public string? SourceUrl { get; set; }
