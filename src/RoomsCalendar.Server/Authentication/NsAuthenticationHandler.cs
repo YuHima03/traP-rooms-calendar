@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
+using System.Security.Claims;
 using System.Text.Encodings.Web;
 
 namespace RoomsCalendar.Server.Authentication
@@ -14,9 +15,13 @@ namespace RoomsCalendar.Server.Authentication
                 return Task.FromResult(AuthenticateResult.NoResult());
             }
             return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(
-                new System.Security.Claims.ClaimsPrincipal(
-                    new System.Security.Claims.ClaimsIdentity(
-                        [ new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Name, username) ]
+                new ClaimsPrincipal(
+                    new ClaimsIdentity(
+                        [
+                            new Claim(ClaimTypes.Name, username),
+                            new Claim(ClaimTypes.Role, "user")
+                        ],
+                        NsAuthenticationDefaults.AuthenticationScheme
                     )
                 ),
                 NsAuthenticationDefaults.AuthenticationScheme

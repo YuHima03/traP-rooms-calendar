@@ -8,7 +8,7 @@
 
         public void MapHandlers(IEndpointRouteBuilder builder)
         {
-            var apiGroup = builder.MapGroup("api");
+            var apiGroup = builder.MapGroup("api").RequireAuthorization();
             _eventsHandler.MapHandlers(apiGroup);
             _roomsHandler.MapHandlers(apiGroup);
             _roomsIcalHandler.MapHandlers(apiGroup);

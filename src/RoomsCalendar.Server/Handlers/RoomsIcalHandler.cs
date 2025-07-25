@@ -44,8 +44,8 @@ namespace RoomsCalendar.Server.Handlers
 
         public void MapHandlers(IEndpointRouteBuilder builder)
         {
-            builder.MapGroup("rooms/ical")
-                .MapGet("{id:guid:required}/{token}", GetRoomsIcalAsync);
+            builder.MapGet("rooms/ical/{id:guid:required}/{token}", GetRoomsIcalAsync)
+                .AllowAnonymous();
         }
     }
 }
