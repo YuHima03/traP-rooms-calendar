@@ -3,11 +3,11 @@ using RoomsCalendar.Share.Domain.Repository;
 
 namespace RoomsCalendar.Infrastructure.Repository
 {
-    sealed class CalendarStreamsRepository(DbContextOptions<CalendarStreamsRepository> options) : DbContext(options), ICalendarStreamsRepository
+    public sealed class CalendarStreamsRepository(DbContextOptions<CalendarStreamsRepository> options) : DbContext(options), ICalendarStreamsRepository
     {
         DbSet<CalendarStream> CalendarStreams { get; set; }
 
-        public async ValueTask<Share.Domain.CalendarStream> GetCalendarStreamAsync(Guid streamId, CancellationToken ct = default)
+        async ValueTask<Share.Domain.CalendarStream> ICalendarStreamsRepository.GetCalendarStreamAsync(Guid streamId, CancellationToken ct)
         {
             return await CalendarStreams
                 .AsNoTracking()
@@ -16,7 +16,7 @@ namespace RoomsCalendar.Infrastructure.Repository
                 .SingleAsync(ct);
         }
 
-        public async ValueTask<Share.Domain.CalendarStream> GetOrCreateUserCalendarStreamAsync(Guid userId, CancellationToken ct = default)
+        async ValueTask<Share.Domain.CalendarStream> ICalendarStreamsRepository.GetOrCreateUserCalendarStreamAsync(Guid userId, CancellationToken ct)
         {
             var cs = await CalendarStreams
                 .AsNoTracking()
@@ -38,7 +38,7 @@ namespace RoomsCalendar.Infrastructure.Repository
             return rec.ToDomain();
         }
 
-        public async ValueTask<Share.Domain.CalendarStream> RefreshCalendarStreamTokenAsync(Guid streamId, CancellationToken ct = default)
+        async ValueTask<Share.Domain.CalendarStream> ICalendarStreamsRepository.RefreshCalendarStreamTokenAsync(Guid streamId, CancellationToken ct)
         {
             var cs = await CalendarStreams
                 .Where(cs => cs.Id == streamId)
