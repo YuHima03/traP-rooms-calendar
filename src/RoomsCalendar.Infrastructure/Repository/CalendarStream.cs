@@ -10,8 +10,8 @@ namespace RoomsCalendar.Infrastructure.Repository
         [Key]
         public Guid Id { get; set; }
 
-        [Column("user_id")]
-        public Guid UserId { get; set; }
+        [Column("username")]
+        public required string Username { get; set; }
 
         [Column("token")]
         public required string Token { get; set; }
@@ -31,7 +31,7 @@ namespace RoomsCalendar.Infrastructure.Repository
         {
             return new Share.Domain.CalendarStream(
                 stream.Id,
-                stream.UserId,
+                stream.Username,
                 stream.Token,
                 stream.CreatedAt,
                 stream.UpdatedAt

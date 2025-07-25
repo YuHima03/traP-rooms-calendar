@@ -2,7 +2,7 @@
 {
     public record class CalendarStream(
         Guid Id,
-        Guid UserId,
+        string Username,
         string Token,
         DateTimeOffset CreatedAt,
         DateTimeOffset UpdatedAt

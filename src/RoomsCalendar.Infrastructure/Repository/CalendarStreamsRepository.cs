@@ -16,11 +16,11 @@ namespace RoomsCalendar.Infrastructure.Repository
                 .SingleOrDefaultAsync(ct);
         }
 
-        async ValueTask<Share.Domain.CalendarStream> ICalendarStreamsRepository.GetOrCreateUserCalendarStreamAsync(Guid userId, CancellationToken ct)
+        async ValueTask<Share.Domain.CalendarStream> ICalendarStreamsRepository.GetOrCreateUserCalendarStreamAsync(string username, CancellationToken ct)
         {
             var cs = await CalendarStreams
                 .AsNoTracking()
-                .Where(cs => cs.UserId == userId)
+                .Where(cs => cs.Username == username)
                 .Select(cs => cs.ToDomain())
                 .SingleOrDefaultAsync(ct);
             if (cs is not null)
@@ -30,7 +30,7 @@ namespace RoomsCalendar.Infrastructure.Repository
             CalendarStream rec = new()
             {
                 Id = Guid.CreateVersion7(),
-                UserId = userId,
+                Username = username,
                 Token = GenerateToken()
             };
             CalendarStreams.Add(rec);
