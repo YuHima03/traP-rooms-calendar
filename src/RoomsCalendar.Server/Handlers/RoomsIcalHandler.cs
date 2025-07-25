@@ -1,9 +1,9 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RoomsCalendar.Infrastructure.Repository;
 using RoomsCalendar.Server.Services;
 using RoomsCalendar.Share.Domain.Repository;
+using System.Text;
 
 namespace RoomsCalendar.Server.Handlers
 {
@@ -13,7 +13,7 @@ namespace RoomsCalendar.Server.Handlers
         [ProducesResponseType<string>(StatusCodes.Status200OK)]
         [ProducesResponseType<string>(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        async ValueTask<Results<Ok<string>, BadRequest<string>, NotFound>> GetRoomsIcalAsync(
+        async ValueTask<IResult> GetRoomsIcalAsync(
             HttpContext ctx,
             [FromServices] RoomsCalendarProvider calendarProvider,
             [FromServices] IDbContextFactory<CalendarStreamsRepository> repoFactory,
@@ -30,8 +30,11 @@ namespace RoomsCalendar.Server.Handlers
                 {
                     return TypedResults.NotFound();
                 }
-                ctx.Response.Headers.ContentType = "text/calendar";
-                return TypedResults.Ok(await calendarProvider.GetIcalStringAsync(excludeOccupied, ct));
+                return Results.Text(
+                    await calendarProvider.GetIcalStringAsync(excludeOccupied, ct),
+                    "text/calendar",
+                    Encoding.UTF8
+                );
             }
             catch (NotImplementedException)
             {
