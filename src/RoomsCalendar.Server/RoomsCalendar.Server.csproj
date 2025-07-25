@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\RoomsCalendar.Infrastructure\RoomsCalendar.Infrastructure.csproj" />
     <ProjectReference Include="..\RoomsCalendar.Share\RoomsCalendar.Share.csproj" />
     <ProjectReference Include="..\RoomsCalendar.Client\RoomsCalendar.Client.csproj" />
   </ItemGroup>

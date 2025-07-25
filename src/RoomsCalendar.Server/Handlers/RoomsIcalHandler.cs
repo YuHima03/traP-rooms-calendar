@@ -12,6 +12,8 @@ namespace RoomsCalendar.Server.Handlers
         async ValueTask<Results<Ok<string>, BadRequest<string>>> GetRoomsIcalAsync(
             HttpContext ctx,
             [FromServices] RoomsCalendarProvider calendarProvider,
+            [FromRoute] Guid id,
+            [FromRoute] string token,
             [FromQuery(Name = "excludeOccupied")] bool excludeOccupied = false)
         {
             var ct = ctx.RequestAborted;
@@ -32,7 +34,7 @@ namespace RoomsCalendar.Server.Handlers
         public void MapHandlers(IEndpointRouteBuilder builder)
         {
             builder.MapGroup("rooms/ical")
-                .MapGet("", GetRoomsIcalAsync);
+                .MapGet("{id:guid:required}/{token}", GetRoomsIcalAsync);
         }
     }
 }
