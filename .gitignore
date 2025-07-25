@@ -406,3 +406,6 @@ FodyWeavers.xsd
 
 # Tailwind CSS generated
 src/RoomsCalendar.Client/wwwroot/css/app.css
+
+# Mounted db files
+db/mysql

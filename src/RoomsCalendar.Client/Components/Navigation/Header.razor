@@ -1,5 +1,47 @@
-﻿<header class="sticky top-0 h-16 flex flex-row flex-nowrap items-center px-6 bg-default-secondary">
-    <h1 class="tx-h2">
-        進捗部屋情報
-    </h1>
+﻿@inject IOptions<ITraqClientConfiguration> TraqClientConfiguration
+
+<header class="sticky top-0 h-16 flex flex-row flex-nowrap items-center px-6 bg-default-secondary">
+
+    <div class="flex flex-row gap-x-6 grow">
+
+        <NavLink href="/"
+                 class="tx-button py-2 hover:opacity-80
+                        [&.active]:text-note-primary [&.active]:border-b-2 [&.active]:border-tx-note-primary"
+                 Match="NavLinkMatch.All">
+            ホーム
+        </NavLink>
+
+        <NavLink href="/settings/ical"
+                 class="tx-button py-2 hover:opacity-80
+                        [&.active]:text-note-primary [&.active]:border-b-2 [&.active]:border-tx-note-primary"
+                 Match="NavLinkMatch.All">
+            カレンダー配信
+        </NavLink>
+
+    </div>
+
+    @if (Username is not null && traqApiBaseAddress is not null)
+    {
+        <span class="w-fit h-fit rounded-full overflow-hidden">
+            <img src="@($"{traqApiBaseAddress}/public/icon/{Username}")"
+                 alt="@($"Icon of {Username}")"
+                 title="@Username"
+                 width="32"
+                 height="32" />
+        </span>
+    }
+
 </header>
+
+@code {
+    string? traqApiBaseAddress = null;
+
+    [CascadingParameter]
+    public string? Username { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        traqApiBaseAddress = TraqClientConfiguration.Value.TraqApiBaseAddress?.TrimEnd('/');
+    }
+}

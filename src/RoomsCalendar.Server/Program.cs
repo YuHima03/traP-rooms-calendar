@@ -1,9 +1,14 @@
 using Knoq.Extensions.Authentication;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using RoomsCalendar.Server.Configurations;
 using RoomsCalendar.Server.Services;
 using RoomsCalendar.Share;
+using RoomsCalendar.Share.Configuration;
 using RoomsCalendar.Share.Domain;
 using Traq;
 
@@ -37,6 +42,7 @@ namespace RoomsCalendar.Server
 
                 services.Configure<KnoqClientOptions>(builder.Configuration);
                 services.Configure<TraqClientOptions>(builder.Configuration);
+                services.AddSingleton<IOptions<ITraqClientConfiguration>>(sp => sp.GetRequiredService<IOptions<TraqClientOptions>>());
                 services.AddSingleton<IConfigureOptions<TraqApiClientOptions>>(sp =>
                 {
                     return new ConfigureOptions<TraqApiClientOptions>(opt =>
@@ -77,7 +83,24 @@ namespace RoomsCalendar.Server
 
                 services.AddSingleton<RoomsCalendarProvider>();
 
+                services.AddSingleton(UserProvider.GetProvider);
+
+                services.AddHttpContextAccessor();
+
                 services.AddScoped(sp => new HttpClient { BaseAddress = new(sp.GetRequiredService<NavigationManager>().BaseUri) });
+
+                Action<IServiceProvider, DbContextOptionsBuilder> dbContextOptionsAction = (sp, opt) =>
+                {
+                    opt.UseMySQL(sp.GetRequiredService<IOptions<NsMySqlConfiguration>>().Value.GetConnectionString());
+                };
+                services.Configure<NsMySqlConfiguration>(builder.Configuration);
+                services.AddDbContextFactory<Infrastructure.Repository.CalendarStreamsRepository>(dbContextOptionsAction);
+                services.AddScoped<Share.Domain.Repository.ICalendarStreamsRepository>(sp => sp.GetRequiredService<Infrastructure.Repository.CalendarStreamsRepository>());
+
+                services.AddAuthentication()
+                    .AddScheme<AuthenticationSchemeOptions, Authentication.NsAuthenticationHandler>(Authentication.NsAuthenticationDefaults.AuthenticationScheme, _ => { });
+                services.AddSingleton<AuthenticationStateProvider, ServerAuthenticationStateProvider>()
+                    .AddCascadingAuthenticationState();
             }
 
             // API controllers
@@ -101,15 +124,12 @@ namespace RoomsCalendar.Server
 
             app.UseAntiforgery();
 
-            app.UseAuthentication();
-            app.UseAuthorization();
+            var handler = new Handlers.Handler();
+            handler.MapHandlers(app);
 
             app.MapStaticAssets();
             app.MapRazorComponents<Client.App>()
                 .AddInteractiveWebAssemblyRenderMode();
-
-            var handler = new Handlers.Handler();
-            handler.MapHandlers(app);
 
             app.Run();
         }

@@ -10,6 +10,28 @@
 
     <h2>今後の進捗部屋</h2>
 
+    @if (RoomsProvider.LastUpdatedAt == default)
+    {
+        <AlertCard Type="AlertCard.AlertType.Information"
+                   Title="部屋情報がありません">
+            <p>
+                サーバーの起動直後は部屋情報が表示されません。
+                時間を空けてもう一度アクセスしてください。
+            </p>
+        </AlertCard>
+    }
+    else
+    {
+        <div class="flex flex-row gap-2 flex-wrap tx-body2">
+            <span>
+                最終更新
+            </span>
+            <span>
+                @($"{RoomsProvider.LastUpdatedAt.ToOffset(TimeSpan.FromHours(9)).DateTime:yyyy/MM/dd HH:mm}") (JST)
+            </span>
+        </div>
+    }
+
     <AlertCard Type="AlertCard.AlertType.Information">
         <p>
             進捗部屋の情報は
@@ -40,28 +62,6 @@
     </AlertCard>
 
 </div>
-
-@if (RoomsProvider.LastUpdatedAt == default)
-{
-    <AlertCard Type="AlertCard.AlertType.Information"
-               Title="部屋情報がありません">
-        <p>
-            サーバーの起動直後は部屋情報が表示されません。
-            時間を空けてもう一度アクセスしてください。
-        </p>
-    </AlertCard>
-}
-else
-{
-    <div class="flex flex-row gap-4 flex-wrap">
-        <span class="tx-body-strong text-inherit">
-            最終更新
-        </span>
-        <span>
-            @($"{RoomsProvider.LastUpdatedAt.ToOffset(TimeSpan.FromHours(9)).DateTime:yyyy/MM/dd HH:mm}") (JST)
-        </span>
-    </div>
-}
 
 @if (GroupedRooms is null)
 {

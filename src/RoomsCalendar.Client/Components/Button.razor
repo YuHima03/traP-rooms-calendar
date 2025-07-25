@@ -1,0 +1,55 @@
+﻿@if (Type == ButtonType.Primary)
+{
+    <button class="tx-button text-inv-primary rounded-lg bg-button-primary
+                   hover:cursor-pointer hover:bg-button-secondary
+                   disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            @onclick="OnClickCallback"
+            disabled="@IsDisabled">
+        @Content
+    </button>
+}
+else if (Type == ButtonType.Secondary)
+{
+    <button class="tx-button border-default-secondary border-1 rounded-lg
+                   hover:cursor-pointer hover:bg-default-secondary
+                   disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            @onclick="OnClickCallback"
+            disabled="@IsDisabled">
+        @Content
+    </button>
+}
+
+@code {
+    public enum ButtonType
+    {
+        Primary, Secondary
+    }
+
+    [Parameter]
+    public RenderFragment? Prefix { get; set; }
+
+    [Parameter]
+    public RenderFragment? Suffix { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public required RenderFragment ChildContent { get; set; }
+
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClickCallback { get; set; }
+
+    [Parameter]
+    public bool IsDisabled { get; set; } = false;
+
+    [Parameter]
+    public ButtonType Type { get; set; } = ButtonType.Primary;
+
+    RenderFragment Content =>
+    @<span class="flex flex-row items-center gap-x-2 px-5 py-2">
+        @Prefix
+        @ChildContent
+        @Suffix
+    </span>;
+}
