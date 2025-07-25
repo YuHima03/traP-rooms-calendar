@@ -124,9 +124,6 @@ namespace RoomsCalendar.Server
 
             app.UseAntiforgery();
 
-            //app.UseAuthentication();
-            //app.UseAuthorization();
-
             var handler = new Handlers.Handler();
             handler.MapHandlers(app);
 
