@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using RoomsCalendar.Infrastructure.Repository;
 using RoomsCalendar.Server.Services;
+using RoomsCalendar.Share.Domain.Repository;
 
 namespace RoomsCalendar.Server.Handlers
 {
@@ -8,10 +11,12 @@ namespace RoomsCalendar.Server.Handlers
     {
         [HttpGet]
         [ProducesResponseType<string>(StatusCodes.Status200OK)]
+        [ProducesResponseType<string>(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        async ValueTask<Results<Ok<string>, BadRequest<string>>> GetRoomsIcalAsync(
+        async ValueTask<Results<Ok<string>, BadRequest<string>, NotFound>> GetRoomsIcalAsync(
             HttpContext ctx,
             [FromServices] RoomsCalendarProvider calendarProvider,
+            [FromServices] IDbContextFactory<CalendarStreamsRepository> repoFactory,
             [FromRoute] Guid id,
             [FromRoute] string token,
             [FromQuery(Name = "excludeOccupied")] bool excludeOccupied = false)
@@ -19,6 +24,12 @@ namespace RoomsCalendar.Server.Handlers
             var ct = ctx.RequestAborted;
             try
             {
+                await using var repo = (await repoFactory.CreateDbContextAsync(ct)) as ICalendarStreamsRepository;
+                var cs = await repo.TryGetCalendarStreamAsync(id, ct);
+                if (cs is null || cs.Token != token)
+                {
+                    return TypedResults.NotFound();
+                }
                 ctx.Response.Headers.ContentType = "text/calendar";
                 return TypedResults.Ok(await calendarProvider.GetIcalStringAsync(excludeOccupied, ct));
             }
