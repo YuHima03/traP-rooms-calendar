@@ -1,6 +1,8 @@
 using Knoq.Extensions.Authentication;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using RoomsCalendar.Server.Configurations;
@@ -97,6 +99,8 @@ namespace RoomsCalendar.Server
 
                 services.AddAuthentication()
                     .AddScheme<AuthenticationSchemeOptions, Authentication.NsAuthenticationHandler>(Authentication.NsAuthenticationDefaults.AuthenticationScheme, _ => { });
+                services.AddSingleton<AuthenticationStateProvider, ServerAuthenticationStateProvider>()
+                    .AddCascadingAuthenticationState();
             }
 
             // API controllers
@@ -120,15 +124,15 @@ namespace RoomsCalendar.Server
 
             app.UseAntiforgery();
 
-            app.UseAuthentication();
-            app.UseAuthorization();
+            //app.UseAuthentication();
+            //app.UseAuthorization();
+
+            var handler = new Handlers.Handler();
+            handler.MapHandlers(app);
 
             app.MapStaticAssets();
             app.MapRazorComponents<Client.App>()
                 .AddInteractiveWebAssemblyRenderMode();
-
-            var handler = new Handlers.Handler();
-            handler.MapHandlers(app);
 
             app.Run();
         }
