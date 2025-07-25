@@ -37,11 +37,11 @@
     @if (stream is not null)
     {
         <input type="url"
-                value="@(Navigation.BaseUri.TrimEnd('/'))/@(stream.Id)/@(stream.Token)"
-                onfocus="this.select()"
-                readonly
-                id="stream-url"
-                class="px-3 py-2 border-1 border-default-primary rounded-sm" />
+               value="@(Navigation.BaseUri.TrimEnd('/'))/@(stream.Id)/@(stream.Token)"
+               onfocus="this.select()"
+               readonly
+               id="stream-url"
+               class="px-3 py-2 border-1 border-default-primary rounded-sm" />
 
         <div class="flex flex-row flex-wrap gap-4">
 
