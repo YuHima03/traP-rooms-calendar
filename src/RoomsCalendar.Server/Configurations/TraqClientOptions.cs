@@ -1,6 +1,8 @@
-﻿namespace RoomsCalendar.Server.Configurations
+﻿using RoomsCalendar.Share.Configuration;
+
+namespace RoomsCalendar.Server.Configurations
 {
-    public class TraqClientOptions
+    public class TraqClientOptions : ITraqClientConfiguration
     {
         [ConfigurationKeyName("TRAQ_API_BASE_ADDRESS")]
         public string? TraqApiBaseAddress { get; set; }

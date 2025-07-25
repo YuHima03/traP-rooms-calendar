@@ -1,0 +1,24 @@
+﻿@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+@inject IUserProvider UserProvider
+
+<CascadingValue Value="username"
+                IsFixed="true"
+                ChildContent="ChildContent" />
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public required RenderFragment ChildContent { get; set; }
+
+    string? username = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        var ctx = HttpContextAccessor.HttpContext;
+        if (ctx is not null)
+        {
+            username = await UserProvider.TryGetUsernameAsync(ctx, CancellationToken.None);
+        }
+    }
+}

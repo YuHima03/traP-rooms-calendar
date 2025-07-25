@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using RoomsCalendar.Server.Configurations;
 using RoomsCalendar.Server.Services;
 using RoomsCalendar.Share;
+using RoomsCalendar.Share.Configuration;
 using RoomsCalendar.Share.Domain;
 using Traq;
 
@@ -37,6 +38,7 @@ namespace RoomsCalendar.Server
 
                 services.Configure<KnoqClientOptions>(builder.Configuration);
                 services.Configure<TraqClientOptions>(builder.Configuration);
+                services.AddSingleton<IOptions<ITraqClientConfiguration>>(sp => sp.GetRequiredService<IOptions<TraqClientOptions>>());
                 services.AddSingleton<IConfigureOptions<TraqApiClientOptions>>(sp =>
                 {
                     return new ConfigureOptions<TraqApiClientOptions>(opt =>
@@ -76,6 +78,10 @@ namespace RoomsCalendar.Server
                     .AddKeyedSingleton<IRoomsProvider, TitechRoomsProvider>(ProviderNames.Titech, (sp, _) => sp.GetRequiredService<TitechRoomsProvider>());
 
                 services.AddSingleton<RoomsCalendarProvider>();
+
+                services.AddSingleton(UserProvider.GetProvider);
+
+                services.AddHttpContextAccessor();
 
                 services.AddScoped(sp => new HttpClient { BaseAddress = new(sp.GetRequiredService<NavigationManager>().BaseUri) });
             }

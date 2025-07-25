@@ -27,33 +27,9 @@ namespace RoomsCalendar.Server.Handlers
             return TypedResults.Ok(rooms);
         }
 
-        [HttpGet]
-        [ProducesResponseType<string>(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        async ValueTask<Results<Ok<string>, BadRequest<string>>> GetRoomsIcalAsync(
-            HttpContext ctx,
-            [FromServices] RoomsCalendarProvider calendarProvider,
-            [FromQuery(Name = "excludeOccupied")] bool excludeOccupied = false)
-        {
-            var ct = ctx.RequestAborted;
-            try
-            {
-                ctx.Response.Headers.ContentType = "text/calendar";
-                return TypedResults.Ok(await calendarProvider.GetIcalStringAsync(excludeOccupied, ct));
-            }
-            catch (NotImplementedException)
-            {
-                ctx.Response.Headers.ContentType = "application/json";
-                return TypedResults.BadRequest("""
-                    {"message":"Ical generation for occupied rooms is not implemented."}
-                    """);
-            }
-        }
-
         public void MapHandlers(IEndpointRouteBuilder builder)
         {
             builder.MapGet("rooms", GetRoomsAsync);
-            builder.MapGet("rooms/ical", GetRoomsIcalAsync);
         }
 
         static readonly BadRequest<string> BadRequest_InvalidTime = TypedResults.BadRequest("""
