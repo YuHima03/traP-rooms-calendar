@@ -37,7 +37,7 @@
     @if (stream is not null)
     {
         <input type="url"
-               value="@(Navigation.BaseUri.TrimEnd('/'))/@(stream.Id)/@(stream.Token)"
+               value="@(Navigation.BaseUri.TrimEnd('/'))/api/rooms/ical/@(stream.Id)/@(stream.Token)"
                onfocus="this.select()"
                readonly
                id="stream-url"
