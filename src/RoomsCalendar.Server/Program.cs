@@ -1,5 +1,6 @@
 using Knoq.Extensions.Authentication;
 using Microsoft.AspNetCore.Components;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using RoomsCalendar.Server.Configurations;
 using RoomsCalendar.Server.Services;
@@ -84,6 +85,13 @@ namespace RoomsCalendar.Server
                 services.AddHttpContextAccessor();
 
                 services.AddScoped(sp => new HttpClient { BaseAddress = new(sp.GetRequiredService<NavigationManager>().BaseUri) });
+
+                services.Configure<NsMySqlConfiguration>(builder.Configuration);
+                services.AddDbContextFactory<Infrastructure.Repository.CalendarStreamsRepository>((sp, opt) =>
+                {
+                    var conf = sp.GetRequiredService<IOptions<NsMySqlConfiguration>>().Value;
+                    opt.UseMySQL(conf.GetConnectionString());
+                });
             }
 
             // API controllers
