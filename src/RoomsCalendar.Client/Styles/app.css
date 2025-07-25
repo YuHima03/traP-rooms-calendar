@@ -104,6 +104,7 @@
     --color-tx-default-primary: var(--color-black);
     --color-tx-default-secondary: var(--color-gray-7);
     --color-tx-default-tertiary: var(--color-gray-5);
+    --color-tx-inv-primary: var(--color-white);
     --color-tx-note-primary: var(--color-blue-6);
     --color-tx-success-primary: var(--color-green-6);
     --color-tx-warning-primary: var(--color-yellow-6);
@@ -114,6 +115,8 @@
     --color-bg-default-primary: var(--color-white);
     --color-bg-default-secondary: var(--color-gray-0);
     --color-bg-default-tertiary: var(--color-gray-1);
+    --color-bg-button-primary: var(--color-blue-5);
+    --color-bg-button-secondary: var(--color-blue-6);
     --color-bg-note-primary: var(--color-blue-0);
     --color-bg-success-primary: var(--color-green-0);
     --color-bg-warning-primary: var(--color-yellow-0);
@@ -171,6 +174,7 @@
 @layer base {
     :root {
         @apply tx-body;
+        @apply box-border;
     }
     h1 {
         @apply tx-h1;

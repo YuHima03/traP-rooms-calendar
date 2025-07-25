@@ -1,0 +1,91 @@
+﻿@page "/settings/ical"
+@inject NavigationManager Navigation
+@inject ICalendarStreamsRepository Repository
+
+<PageTitle>カレンダー配信</PageTitle>
+
+<HeadContent>
+    <script defer>
+        function copyIcalURL() {
+            const url = document.getElementById("stream-url").value;
+            if (url && url.trim()) {
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(url).then(() => {
+                        alert("URLをコピーしました。");
+                    })
+                }
+                else {
+                    alert("Clipboard API is not supported in this browser.")
+                }
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("copy-url-button").addEventListener("click", copyIcalURL);
+        });
+    </script>
+</HeadContent>
+
+<div class="flex flex-col gap-y-4">
+
+    <h2>カレンダー配信URL</h2>
+
+    <p>
+        このURLをカレンダーアプリ等に登録すると、進捗部屋をカレンダー上で確認できるようになります。
+    </p>
+
+    @if (stream is not null)
+    {
+        <input type="url"
+                value="@(Navigation.BaseUri.TrimEnd('/'))/@(stream.Id)/@(stream.Token)"
+                onfocus="this.select()"
+                readonly
+                id="stream-url"
+                class="px-3 py-2 border-1 border-default-primary rounded-sm" />
+
+        <div class="flex flex-row flex-wrap gap-4">
+
+            <div id="copy-url-button" class="flex">
+                <Button>
+                    URLをコピー
+                </Button>
+            </div>
+
+            <a href="settings/ical?_refresh=true" class="flex">
+                <Button Type="Button.ButtonType.Secondary">
+                    トークンを再生成
+                </Button>
+            </a>
+
+        </div>
+    }
+
+</div>
+
+@code {
+    [CascadingParameter]
+    string? Username { get; set; }
+
+    [SupplyParameterFromQuery(Name = "_refresh")]
+    bool? Refresh { get; set; }
+
+    CalendarStream? stream = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        if (Username is not null)
+        {
+            await using (Repository)
+            {
+                stream = await Repository.GetOrCreateUserCalendarStreamAsync(Username);
+                if (Refresh.GetValueOrDefault())
+                {
+                    await Repository.TryRefreshCalendarStreamTokenAsync(stream.Id);
+                    Navigation.NavigateTo("settings/ical", true, true);
+                    return;
+                }
+            }
+        }
+    }
+}
