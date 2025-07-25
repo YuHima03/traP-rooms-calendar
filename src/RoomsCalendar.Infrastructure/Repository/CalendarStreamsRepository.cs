@@ -7,13 +7,13 @@ namespace RoomsCalendar.Infrastructure.Repository
     {
         DbSet<CalendarStream> CalendarStreams { get; set; }
 
-        async ValueTask<Share.Domain.CalendarStream> ICalendarStreamsRepository.GetCalendarStreamAsync(Guid streamId, CancellationToken ct)
+        async ValueTask<Share.Domain.CalendarStream?> ICalendarStreamsRepository.TryGetCalendarStreamAsync(Guid streamId, CancellationToken ct)
         {
             return await CalendarStreams
                 .AsNoTracking()
                 .Where(cs => cs.Id == streamId)
                 .Select(cs => cs.ToDomain())
-                .SingleAsync(ct);
+                .SingleOrDefaultAsync(ct);
         }
 
         async ValueTask<Share.Domain.CalendarStream> ICalendarStreamsRepository.GetOrCreateUserCalendarStreamAsync(Guid userId, CancellationToken ct)
@@ -38,11 +38,15 @@ namespace RoomsCalendar.Infrastructure.Repository
             return rec.ToDomain();
         }
 
-        async ValueTask<Share.Domain.CalendarStream> ICalendarStreamsRepository.RefreshCalendarStreamTokenAsync(Guid streamId, CancellationToken ct)
+        async ValueTask<Share.Domain.CalendarStream?> ICalendarStreamsRepository.TryRefreshCalendarStreamTokenAsync(Guid streamId, CancellationToken ct)
         {
             var cs = await CalendarStreams
                 .Where(cs => cs.Id == streamId)
-                .SingleAsync(ct);
+                .SingleOrDefaultAsync(ct);
+            if (cs is null)
+            {
+                return null;
+            }
             cs.Token = GenerateToken();
             await SaveChangesAsync(ct);
             return cs.ToDomain();
