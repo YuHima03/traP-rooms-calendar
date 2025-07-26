@@ -21,7 +21,7 @@
         }
 
         document.addEventListener("DOMContentLoaded", () => {
-        document.getElementById("copy-url-button").addEventListener("click", copyIcalURL);
+            document.getElementById("copy-url-button").addEventListener("click", copyIcalURL);
         });
     </script>
 </HeadContent>
@@ -37,11 +37,11 @@
     @if (stream is not null)
     {
         <input type="url"
-        value="@(Navigation.BaseUri.TrimEnd('/'))/api/rooms/ical/@(streamIdBase58)/@(stream.Token)"
-        onfocus="this.select()"
-        readonly
-        id="stream-url"
-        class="px-3 py-2 border-1 border-default-primary rounded-sm" />
+               value="@(Navigation.BaseUri.TrimEnd('/'))/api/rooms/ical/@(streamIdBase58)/@(stream.Token)"
+               onfocus="this.select()"
+               readonly
+               id="stream-url"
+               class="px-3 py-2 border-1 border-default-primary rounded-sm" />
 
         <div class="flex flex-row flex-wrap gap-4">
 
