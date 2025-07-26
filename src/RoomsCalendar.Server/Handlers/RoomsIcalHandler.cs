@@ -24,12 +24,15 @@ namespace RoomsCalendar.Server.Handlers
             var ct = ctx.RequestAborted;
             try
             {
-                Span<byte> guidBytes = stackalloc byte[16];
-                if (!SimpleBase.Base58.Bitcoin.TryDecode(id, guidBytes, out var len) || len != guidBytes.Length)
+                if (!Guid.TryParse(id, out var guid)) // accept both GUID and Base58 encoded GUID
                 {
-                    return TypedResults.NotFound();
+                    Span<byte> guidBytes = stackalloc byte[16];
+                    if (!SimpleBase.Base58.Bitcoin.TryDecode(id, guidBytes, out var len) || len != guidBytes.Length)
+                    {
+                        return TypedResults.NotFound();
+                    }
+                    guid = new(guidBytes);
                 }
-                Guid guid = new(guidBytes);
 
                 await using var repo = (await repoFactory.CreateDbContextAsync(ct)) as ICalendarStreamsRepository;
                 var cs = await repo.TryGetCalendarStreamAsync(guid, ct);
