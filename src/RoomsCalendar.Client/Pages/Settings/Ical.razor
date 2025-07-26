@@ -63,7 +63,7 @@
 </div>
 
 @code {
-    [CascadingParameter]
+    [CascadingParameter(Name = CascadingUsername.CascadingParameterName)]
     string? Username { get; set; }
 
     [SupplyParameterFromQuery(Name = "_refresh")]
