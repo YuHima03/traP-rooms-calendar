@@ -41,7 +41,7 @@
 @code {
     string? traqApiBaseAddress = null;
 
-    [CascadingParameter]
+    [CascadingParameter(Name = CascadingUsername.CascadingParameterName)]
     public string? Username { get; set; }
 
     protected override async Task OnInitializedAsync()

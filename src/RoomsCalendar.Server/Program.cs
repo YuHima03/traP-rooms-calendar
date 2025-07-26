@@ -83,8 +83,6 @@ namespace RoomsCalendar.Server
 
                 services.AddSingleton<RoomsCalendarProvider>();
 
-                services.AddSingleton(UserProvider.GetProvider);
-
                 services.AddHttpContextAccessor();
 
                 services.AddScoped(sp => new HttpClient { BaseAddress = new(sp.GetRequiredService<NavigationManager>().BaseUri) });

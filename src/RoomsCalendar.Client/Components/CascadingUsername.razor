@@ -1,24 +1,37 @@
-﻿@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
-@inject IUserProvider UserProvider
-
-<CascadingValue Value="username"
-                IsFixed="true"
+﻿
+<CascadingValue Name="@CascadingParameterName"
+                Value="username"
                 ChildContent="ChildContent" />
 
 @code {
+    string? username = null;
+
+    public const string CascadingParameterName = "Username";
+
+    [CascadingParameter]
+    public required Task<AuthenticationState> AuthenticationStateTask { get; set; }
+
     [Parameter]
     [EditorRequired]
     public required RenderFragment ChildContent { get; set; }
 
-    string? username = null;
-
     protected override async Task OnInitializedAsync()
     {
-        await base.OnInitializedAsync();
-        var ctx = HttpContextAccessor.HttpContext;
-        if (ctx is not null)
+        if (AuthenticationStateTask is not null)
         {
-            username = await UserProvider.TryGetUsernameAsync(ctx, CancellationToken.None);
+            try
+            {
+                var authenticationState = await AuthenticationStateTask;
+                if (authenticationState.User.Identity?.IsAuthenticated is true)
+                {
+                    var usernameClaim = authenticationState.User.FindFirst(System.Security.Claims.ClaimTypes.Name);
+                    if (usernameClaim is not null)
+                    {
+                        username = usernameClaim.Value;
+                    }
+                }
+            }
+            catch { }
         }
     }
 }
