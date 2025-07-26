@@ -4,9 +4,7 @@
         @if (!string.IsNullOrEmpty(Title))
         {
             <div class="flex flex-row flex-nowrap gap-x-2 items-center">
-                <span class="material-symbols-rounded font-base!">
-                    info
-                </span>
+                <Icon Name="info" />
                 <h3 class="tx-body-strong text-inherit">
                     @Title
                 </h3>
@@ -23,9 +21,24 @@ else if (Type == AlertType.Success)
         @if (!string.IsNullOrEmpty(Title))
         {
             <div class="flex flex-row flex-nowrap gap-x-2 items-center">
-                <span class="material-symbols-rounded font-base!">
-                    check_circle
-                </span>
+                <Icon Name="check_circle" />
+                <h3 class="tx-body-strong text-inherit">
+                    @Title
+                </h3>
+            </div>
+        }
+        <div class="flex flex-col gap-y-3">
+            @ChildContent
+        </div>
+    </div>
+}
+else if (Type == AlertType.Tips)
+{
+    <div class="grow flex flex-col gap-y-4 p-4 rounded-xl text-tips-primary bg-tips-primary border-1 border-default-secondary">
+        @if (!string.IsNullOrEmpty(Title))
+        {
+            <div class="flex flex-row flex-nowrap gap-x-2 items-center">
+                <Icon Name="lightbulb_2" />
                 <h3 class="tx-body-strong text-inherit">
                     @Title
                 </h3>

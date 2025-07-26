@@ -1,0 +1,20 @@
+﻿@if (Source == IconSource.MaterialSymbols)
+{
+    <span class="select-none material-symbols-rounded text-inherit font-inherit">
+        @Name
+    </span>
+}
+
+@code {
+    public enum IconSource : byte
+    {
+        MaterialSymbols
+    }
+
+    [Parameter]
+    public IconSource Source { get; set; } = IconSource.MaterialSymbols;
+
+    [Parameter]
+    [EditorRequired]
+    public required string Name { get; set; }
+}
