@@ -53,7 +53,7 @@ namespace RoomsCalendar.Infrastructure.Repository
         }
 
         const string TokenChars = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ";
-        const int TokenLength = 32;
+        const int TokenLength = 16;
 
         static string GenerateToken()
         {

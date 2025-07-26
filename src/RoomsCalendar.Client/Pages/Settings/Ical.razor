@@ -21,7 +21,7 @@
         }
 
         document.addEventListener("DOMContentLoaded", () => {
-            document.getElementById("copy-url-button").addEventListener("click", copyIcalURL);
+        document.getElementById("copy-url-button").addEventListener("click", copyIcalURL);
         });
     </script>
 </HeadContent>
@@ -37,11 +37,11 @@
     @if (stream is not null)
     {
         <input type="url"
-               value="@(Navigation.BaseUri.TrimEnd('/'))/api/rooms/ical/@(stream.Id)/@(stream.Token)"
-               onfocus="this.select()"
-               readonly
-               id="stream-url"
-               class="px-3 py-2 border-1 border-default-primary rounded-sm" />
+        value="@(Navigation.BaseUri.TrimEnd('/'))/api/rooms/ical/@(streamIdBase58)/@(stream.Token)"
+        onfocus="this.select()"
+        readonly
+        id="stream-url"
+        class="px-3 py-2 border-1 border-default-primary rounded-sm" />
 
         <div class="flex flex-row flex-wrap gap-4">
 
@@ -70,6 +70,7 @@
     bool? Refresh { get; set; }
 
     CalendarStream? stream = null;
+    string? streamIdBase58 = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -85,6 +86,10 @@
                     Navigation.NavigateTo("settings/ical", true, true);
                     return;
                 }
+
+                Span<byte> streamIdBytes = stackalloc byte[16];
+                stream.Id.TryWriteBytes(streamIdBytes);
+                streamIdBase58 = SimpleBase.Base58.Bitcoin.Encode(streamIdBytes);
             }
         }
     }

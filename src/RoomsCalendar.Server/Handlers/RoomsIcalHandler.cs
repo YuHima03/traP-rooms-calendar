@@ -11,21 +11,31 @@ namespace RoomsCalendar.Server.Handlers
     {
         [HttpGet]
         [ProducesResponseType<string>(StatusCodes.Status200OK)]
-        [ProducesResponseType<string>(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         async ValueTask<IResult> GetRoomsIcalAsync(
             HttpContext ctx,
             [FromServices] RoomsCalendarProvider calendarProvider,
             [FromServices] IDbContextFactory<CalendarStreamsRepository> repoFactory,
-            [FromRoute] Guid id,
+            [FromRoute] string id,
             [FromRoute] string token,
             [FromQuery(Name = "excludeOccupied")] bool excludeOccupied = false)
         {
             var ct = ctx.RequestAborted;
             try
             {
+                if (!Guid.TryParse(id, out var guid)) // accept both GUID and Base58 encoded GUID
+                {
+                    Span<byte> guidBytes = stackalloc byte[16];
+                    if (!SimpleBase.Base58.Bitcoin.TryDecode(id, guidBytes, out var len) || len != guidBytes.Length)
+                    {
+                        return TypedResults.NotFound();
+                    }
+                    guid = new(guidBytes);
+                }
+
                 await using var repo = (await repoFactory.CreateDbContextAsync(ct)) as ICalendarStreamsRepository;
-                var cs = await repo.TryGetCalendarStreamAsync(id, ct);
+                var cs = await repo.TryGetCalendarStreamAsync(guid, ct);
                 if (cs is null || cs.Token != token)
                 {
                     return TypedResults.NotFound();
@@ -47,7 +57,7 @@ namespace RoomsCalendar.Server.Handlers
 
         public void MapHandlers(IEndpointRouteBuilder builder)
         {
-            builder.MapGet("rooms/ical/{id:guid:required}/{token}", GetRoomsIcalAsync)
+            builder.MapGet("rooms/ical/{id:required}/{token:required}", GetRoomsIcalAsync)
                 .AllowAnonymous();
         }
     }
