@@ -32,35 +32,6 @@
         </div>
     }
 
-    <AlertCard Type="AlertCard.AlertType.Information">
-        <p>
-            進捗部屋の情報は
-            <a href="@($"/api/rooms")"
-               target="_blank"
-               class="font-medium text-note-primary text-balance underline hover:no-underline">
-                <code>/api/rooms</code>
-                <span class="material-symbols-rounded text-sm!">open_in_new</span>
-            </a>
-            から、イベントの情報は
-            <a href="@($"/api/events")"
-               target="_blank"
-               class="font-medium text-note-primary text-balance underline hover:no-underline">
-                <code>/api/events</code>
-                <span class="material-symbols-rounded text-sm!">open_in_new</span>
-            </a>
-            から取得することができます。
-        </p>
-        <p>
-            クエリパラメータ
-            <code>since</code>
-            と
-            <code>until</code>
-            に
-            ISO8601
-            形式の日時を指定して絞り込むことができます。
-        </p>
-    </AlertCard>
-
 </div>
 
 @if (GroupedRooms is null)
@@ -76,7 +47,7 @@ else
     @foreach (var (date, rooms) in GroupedRooms)
     {
         <div class="flex flex-col gap-y-3
-                    md:flex-row md:flex-nowrap md:gap-x-4">
+                                    md:flex-row md:flex-nowrap md:gap-x-4">
 
             <div class="tx-body-strong w-[6rem] pt-2 shrink-0">
                 <h3>
@@ -110,6 +81,36 @@ else
         </div>
     }
 }
+
+<AlertCard Type="AlertCard.AlertType.Tips"
+           Title="APIについて">
+    <p>
+        進捗部屋の情報は
+        <a href="@($"/api/rooms")"
+           target="_blank"
+           class="font-medium text-note-primary text-balance underline hover:no-underline">
+            <code>/api/rooms</code>
+            <span class="material-symbols-rounded text-sm!">open_in_new</span>
+        </a>
+        から、イベントの情報は
+        <a href="@($"/api/events")"
+           target="_blank"
+           class="font-medium text-note-primary text-balance underline hover:no-underline">
+            <code>/api/events</code>
+            <span class="material-symbols-rounded text-sm!">open_in_new</span>
+        </a>
+        から取得することができます。
+    </p>
+    <p>
+        クエリパラメータ
+        <code>since</code>
+        と
+        <code>until</code>
+        に
+        ISO8601
+        形式の日時を指定して絞り込むことができます。
+    </p>
+</AlertCard>
 
 @code {
     [Inject(Key = Share.ProviderNames.Knoq)]
