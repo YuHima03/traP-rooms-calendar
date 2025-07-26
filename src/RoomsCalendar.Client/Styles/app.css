@@ -92,6 +92,16 @@
     --color-coral-7: #801f0f;
     --color-coral-8: #691105;
     --color-coral-9: #510901;
+    --color-aqua-0: #e7fdf5;
+    --color-aqua-1: #bcf4e0;
+    --color-aqua-2: #86e5c6;
+    --color-aqua-3: #47ba9a;
+    --color-aqua-4: #1ba180;
+    --color-aqua-5: #078b6e;
+    --color-aqua-6: #00775d;
+    --color-aqua-7: #0e6751;
+    --color-aqua-8: #065240;
+    --color-aqua-9: #0f3c2f;
     --color-black: #1d2227;
     --color-white: #ffffff;
 }
@@ -109,6 +119,7 @@
     --color-tx-success-primary: var(--color-green-6);
     --color-tx-warning-primary: var(--color-yellow-6);
     --color-tx-dangerous-primary: var(--color-red-6);
+    --color-tx-tips-primary: var(--color-aqua-6);
     /*
     Background
     */
@@ -121,6 +132,7 @@
     --color-bg-success-primary: var(--color-green-0);
     --color-bg-warning-primary: var(--color-yellow-0);
     --color-bg-dangerous-primary: var(--color-red-0);
+    --color-bg-tips-primary: var(--color-aqua-0);
     /*
     Border
     */
