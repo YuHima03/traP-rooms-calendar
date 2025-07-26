@@ -57,13 +57,17 @@ namespace RoomsCalendar.Server.Services
                 Version = "2.0"
             };
             calendar.AddTimeZone(timeZoneInfo);
-            calendar.Events.AddRange(rooms.Select(r => new Ical.Net.CalendarComponents.CalendarEvent
+            calendar.Events.AddRange(rooms.Select(r =>
             {
-                DtStart = new(TimeZoneInfo.ConvertTimeFromUtc(r.AvailableSince.UtcDateTime, timeZoneInfo)),
-                DtEnd = new(TimeZoneInfo.ConvertTimeFromUtc(r.AvailableUntil.UtcDateTime, timeZoneInfo)),
-                Location = r.PlaceName,
-                Summary = $"進捗部屋 {GetSimplePlaceName(r.PlaceName)}",
-                Uid = GetRoomUid(r),
+                var simplePlaceName = GetSimplePlaceName(r.PlaceName);
+                return new Ical.Net.CalendarComponents.CalendarEvent
+                {
+                    DtStart = new(TimeZoneInfo.ConvertTimeFromUtc(r.AvailableSince.UtcDateTime, timeZoneInfo)),
+                    DtEnd = new(TimeZoneInfo.ConvertTimeFromUtc(r.AvailableUntil.UtcDateTime, timeZoneInfo)),
+                    Location = r.PlaceName,
+                    Summary = $"進捗部屋 {simplePlaceName}",
+                    Uid = $"{r.AvailableSince.UtcDateTime:yyyyMMdd'T'HHmmss}R{simplePlaceName}",
+                };
             }));
             lock (CalendarSerializer)
             {
@@ -85,13 +89,6 @@ namespace RoomsCalendar.Server.Services
         {
             var idxSpace = fullPlaceName.IndexOf('\x20');
             return (idxSpace == -1) ? fullPlaceName : fullPlaceName[..idxSpace];
-        }
-
-        static string GetRoomUid(Room room)
-        {
-            DefaultInterpolatedStringHandler str = $"{room.AvailableSince.UtcDateTime:yyyyMMdd'T'HHmmss}R";
-            str.AppendFormatted(GetSimplePlaceName(room.PlaceName));
-            return str.ToStringAndClear();
         }
     }
 }
