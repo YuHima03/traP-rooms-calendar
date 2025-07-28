@@ -13,7 +13,7 @@ namespace RoomsCalendar.Server.Services
 
         public DateTimeOffset LastUpdatedAt { get; private set; }
 
-        public string ProviderName => RoomProviderNames.Knoq;
+        public string ProviderName => RoomProviderNames.KnoqRegistered;
 
         public ValueTask<Event[]> GetEventsAsync(DateTimeOffset since, DateTimeOffset until, CancellationToken ct)
         {

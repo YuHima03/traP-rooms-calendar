@@ -2,7 +2,8 @@
 {
     public static class RoomProviderNames
     {
-        public const string Knoq = "Provider:Knoq";
-        public const string Titech = "Provider:Titech";
+        public const string KnoqRegistered = "Providers:KnoqRegistered";
+
+        public const string TitechReserved = "Providers:TitechReserved";
     }
 }

@@ -113,11 +113,11 @@ else
 </AlertCard>
 
 @code {
-    [Inject(Key = Share.RoomProviderNames.Knoq)]
+    [Inject(Key = Share.RoomProviderNames.ClubRoomFromKnoq)]
     [NotNull]
     IRoomsProvider? RoomsProvider { get; set; }
 
-    [Inject(Key = Share.RoomProviderNames.Titech)]
+    [Inject(Key = Share.RoomProviderNames.TitechReserved)]
     [NotNull]
     IRoomsProvider? TitechRoomsProvider { get; set; }
 

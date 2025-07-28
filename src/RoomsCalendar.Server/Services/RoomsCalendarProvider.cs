@@ -6,7 +6,7 @@ using ZLinq;
 namespace RoomsCalendar.Server.Services
 {
     sealed class RoomsCalendarProvider(
-        [FromKeyedServices(RoomProviderNames.Knoq)] IRoomsProvider roomsProvider,
+        [FromKeyedServices(RoomProviderNames.KnoqRegistered)] IRoomsProvider roomsProvider,
         TimeZoneInfo? calendarTimeZone = null)
     {
         Ical.Net.Serialization.CalendarSerializer CalendarSerializer { get; init; } = new();
@@ -57,8 +57,7 @@ namespace RoomsCalendar.Server.Services
                 Version = "2.0"
             };
             calendar.AddTimeZone(timeZoneInfo);
-            calendar.Events.AddRange(rooms.Select(r =>
-            {
+            calendar.Events.AddRange(rooms.Select(r => {
                 var simplePlaceName = GetSimplePlaceName(r.PlaceName);
                 return new Ical.Net.CalendarComponents.CalendarEvent
                 {

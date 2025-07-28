@@ -15,7 +15,7 @@ namespace RoomsCalendar.Server.Services
 
         public DateTimeOffset LastUpdatedAt { get; private set; }
 
-        public string ProviderName => RoomProviderNames.Titech;
+        public string ProviderName => RoomProviderNames.TitechReserved;
 
         public ValueTask<Room[]> GetRoomsAsync(DateTimeOffset since, DateTimeOffset until, CancellationToken ct)
         {
