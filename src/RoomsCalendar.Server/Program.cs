@@ -69,7 +69,7 @@ namespace RoomsCalendar.Server
                     .AddHostedService<RoomsAndEventsCollector>()
                     .AddSingleton<RoomsAndEventsProvider>()
                     .AddSingleton(sp => sp.GetRequiredService<RoomsAndEventsProvider>() as IEventsProvider)
-                    .AddKeyedSingleton<IRoomsProvider, RoomsAndEventsProvider>(ProviderNames.Knoq, (sp, _) => sp.GetRequiredService<RoomsAndEventsProvider>());
+                    .AddKeyedSingleton<IRoomsProvider, RoomsAndEventsProvider>(RoomProviderNames.Knoq, (sp, _) => sp.GetRequiredService<RoomsAndEventsProvider>());
                 services
                     .Configure<TitechRoomsCollectorConfiguration>(builder.Configuration)
                     .AddSingleton<IConfigureOptions<TitechRoomsCollectorOptions>>(sp =>
@@ -79,7 +79,7 @@ namespace RoomsCalendar.Server
                     })
                     .AddHostedService<TitechRoomsCollector>()
                     .AddSingleton<TitechRoomsProvider>()
-                    .AddKeyedSingleton<IRoomsProvider, TitechRoomsProvider>(ProviderNames.Titech, (sp, _) => sp.GetRequiredService<TitechRoomsProvider>());
+                    .AddKeyedSingleton<IRoomsProvider, TitechRoomsProvider>(RoomProviderNames.Titech, (sp, _) => sp.GetRequiredService<TitechRoomsProvider>());
 
                 services.AddSingleton<RoomsCalendarProvider>();
 
