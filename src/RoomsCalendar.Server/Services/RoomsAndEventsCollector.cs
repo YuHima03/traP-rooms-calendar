@@ -1,5 +1,6 @@
 ﻿using Knoq;
 using RoomsCalendar.Share.Domain;
+using ZLinq;
 
 namespace RoomsCalendar.Server.Services
 {
@@ -52,7 +53,11 @@ namespace RoomsCalendar.Server.Services
             var utcNow = DateTimeOffset.UtcNow;
             var since = GetSearchSinceUtc(fullCollection);
             var events = await knoq.EventsApi.GetEventsAsync(dateBegin: since.ToString("O"), cancellationToken: ct);
-            await dataProvider.UpdateEventsAsync(events.Select(InternalExtensions.KnoqResponseToDomainEvent), since, ct);
+            using var filtered = events
+                .AsValueEnumerable()
+                .Select(InternalExtensions.KnoqResponseToDomainEvent)
+                .ToArrayPool();
+            await dataProvider.UpdateEventsAsync(filtered.ArraySegment, since, ct);
         }
 
         async Task CollectAndUpdateRoomsAsync(bool fullCollection, CancellationToken ct)
@@ -60,7 +65,8 @@ namespace RoomsCalendar.Server.Services
             var utcNow = DateTimeOffset.UtcNow;
             var since = GetSearchSinceUtc(fullCollection);
             var rooms = await knoq.RoomsApi.GetRoomsAsync(dateBegin: since.ToString("O"), cancellationToken: ct);
-            var filterd = rooms
+            using var filterd = rooms
+                .AsValueEnumerable()
                 .Where(r => r.Verified)
                 .Select(InternalExtensions.KnoqResponseToRoom)
                 .GroupBy(r => r.Place)
@@ -69,8 +75,9 @@ namespace RoomsCalendar.Server.Services
                     .DistinctByTime())
                 .SelectMany(g => g
                     .UnionContiguous()
-                    .Select(InternalExtensions.KnoqRoomToDomainRoom));
-            await dataProvider.UpdateRoomsAsync(filterd, since, ct);
+                    .Select(InternalExtensions.KnoqRoomToDomainRoom))
+                .ToArrayPool();
+            await dataProvider.UpdateRoomsAsync(filterd.ArraySegment, since, ct);
         }
 
         DateTimeOffset GetSearchSinceUtc(bool fullCollection)
