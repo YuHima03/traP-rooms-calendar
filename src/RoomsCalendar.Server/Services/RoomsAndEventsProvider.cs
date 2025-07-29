@@ -71,7 +71,7 @@ namespace RoomsCalendar.Server.Services
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask UpdateRoomsAsync(IEnumerable<Room> rooms, DateTimeOffset since, CancellationToken ct)
+        public ValueTask UpdateRoomsAsync<TRooms>(TRooms rooms, DateTimeOffset since, CancellationToken ct) where TRooms : IEnumerable<Room>
         {
             lock (_rooms)
             {
