@@ -46,7 +46,7 @@ namespace RoomsCalendar.Server.Services
                 }
                 else if (idx > 0)
                 {
-                    _rooms.RemoveRange(idx, _rooms.Count - idx);
+                    CollectionsMarshal.SetCount(_rooms, idx);
                 }
 
                 switch (rooms)
