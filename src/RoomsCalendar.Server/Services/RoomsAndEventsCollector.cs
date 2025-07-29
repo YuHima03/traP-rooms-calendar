@@ -77,7 +77,6 @@ namespace RoomsCalendar.Server.Services
                     .UnionContiguous()
                     .Select(InternalExtensions.KnoqRoomToDomainRoom))
                 .ToArrayPool();
-            rooms.Clear();
             await dataProvider.UpdateRoomsAsync(filterd.ArraySegment, since, ct);
         }
 
