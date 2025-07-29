@@ -57,7 +57,6 @@ namespace RoomsCalendar.Server.Services
                 .AsValueEnumerable()
                 .Select(InternalExtensions.KnoqResponseToDomainEvent)
                 .ToArrayPool();
-            events.Clear();
             await dataProvider.UpdateEventsAsync(filtered.ArraySegment, since, ct);
         }
 
