@@ -59,7 +59,7 @@ namespace RoomsCalendar.Server.Services
                 {
                     logger.LogWarning("HTTP request to {SourceUri} failed with status code {StatusCode}.", SourceUri, response.StatusCode);
                 }
-                var rooms = await ParseFetchResultAsync(await response.Content.ReadAsStreamAsync(ct), ct);
+                using var rooms = await ParseFetchResultAsync(await response.Content.ReadAsStreamAsync(ct), ct);
                 if (rooms.Size != 0)
                 {
                     var timeZoneToday = TimeZoneInfo.ConvertTimeToUtc(
