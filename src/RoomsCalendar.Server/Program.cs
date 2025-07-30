@@ -81,6 +81,8 @@ namespace RoomsCalendar.Server
                     .AddHostedService<TitechRoomsCollector>()
                     .AddKeyedSingleton<IRoomsProvider, RoomsProvider>(RoomProviderNames.TitechReserved, new RoomsProvider(RoomProviderNames.TitechReserved));
 
+                services.AddHostedService<MemoryMonitoringService>();
+
                 services.AddSingleton<RoomsCalendarProvider>();
 
                 services.AddHttpContextAccessor();

@@ -32,7 +32,7 @@ namespace RoomsCalendar.Server.Services
             }
         }
 
-        public ValueTask UpdateRoomsAsync(IEnumerable<Room> rooms, DateTimeOffset since, CancellationToken ct)
+        public ValueTask UpdateRoomsAsync<TRooms>(TRooms rooms, DateTimeOffset since, CancellationToken ct) where TRooms : IEnumerable<Room>
         {
             lock (_rooms)
             {
@@ -45,7 +45,22 @@ namespace RoomsCalendar.Server.Services
                 {
                     CollectionsMarshal.SetCount(_rooms, idx);
                 }
-                _rooms.AddRange(rooms);
+
+                switch (rooms)
+                {
+                    case Room[] array:
+                        _rooms.AddRange(array.AsSpan());
+                        break;
+                    case List<Room> list:
+                        _rooms.AddRange(CollectionsMarshal.AsSpan(list));
+                        break;
+                    case ArraySegment<Room> arraySegment:
+                        _rooms.AddRange(arraySegment.AsSpan());
+                        break;
+                    default:
+                        _rooms.AddRange(rooms);
+                        break;
+                }
                 _rooms.Sort(RoomsExtensions.CompareToAvailableUntil);
                 LastUpdatedAt = DateTimeOffset.UtcNow;
             }

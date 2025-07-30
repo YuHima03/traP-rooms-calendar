@@ -20,10 +20,11 @@ namespace RoomsCalendar.Server.Services
 
         const string MatchTdContent = "サークル活動：デジタル創作同好会traP";
 
-        readonly AngleSharp.Html.Parser.HtmlParser HtmlParser = new(new AngleSharp.Html.Parser.HtmlParserOptions
+        readonly AngleSharp.Html.Parser.HtmlParserOptions HtmlParserOptions = new()
         {
-            IsScripting = false
-        });
+            IsScripting = false,
+            IsStrictMode = false,
+        };
 
         Uri? SourceUri { get; set; }
 
@@ -54,19 +55,19 @@ namespace RoomsCalendar.Server.Services
             try
             {
                 using var httpClient = httpClientFactory.CreateClient();
-                var response = await httpClient.GetAsync(reqUri, ct);
+                using var response = await httpClient.GetAsync(reqUri, ct);
                 if (!response.IsSuccessStatusCode)
                 {
                     logger.LogWarning("HTTP request to {SourceUri} failed with status code {StatusCode}.", SourceUri, response.StatusCode);
                 }
-                var rooms = await ParseFetchResultAsync(await response.Content.ReadAsStreamAsync(ct), ct);
-                if (rooms.Length != 0)
+                using var rooms = await ParseFetchResultAsync(await response.Content.ReadAsStreamAsync(ct), ct);
+                if (rooms.Size != 0)
                 {
                     var timeZoneToday = TimeZoneInfo.ConvertTimeToUtc(
                         TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, options.Value.TimeZoneInfo).Date,
                         options.Value.TimeZoneInfo
                     );
-                    await dataProvider.UpdateRoomsAsync(rooms, timeZoneToday, ct);
+                    await dataProvider.UpdateRoomsAsync(rooms.ArraySegment, timeZoneToday, ct);
                 }
             }
             catch (Exception ex)
@@ -101,13 +102,13 @@ namespace RoomsCalendar.Server.Services
             }
         }
 
-        async ValueTask<Room[]> ParseFetchResultAsync(Stream content, CancellationToken ct = default)
+        async ValueTask<PooledArray<Room>> ParseFetchResultAsync(Stream content, CancellationToken ct = default)
         {
-            var doc = await HtmlParser.ParseDocumentAsync(content, ct);
+            using var doc = await new AngleSharp.Html.Parser.HtmlParser(HtmlParserOptions).ParseDocumentAsync(content, ct);
             var mainContainer = doc.GetElementById("div");
             if (mainContainer is null)
             {
-                return [];
+                return new();
             }
             var timeZoneInfo = options.Value.TimeZoneInfo;
             var timeZoneOffset = timeZoneInfo.BaseUtcOffset;
@@ -140,7 +141,7 @@ namespace RoomsCalendar.Server.Services
                         })
                         .Where(r => !string.IsNullOrWhiteSpace(r.PlaceName));
                 })
-                .ToArray();
+                .ToArrayPool();
         }
     }
 
