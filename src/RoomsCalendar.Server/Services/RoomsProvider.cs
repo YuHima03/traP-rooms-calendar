@@ -31,7 +31,7 @@ namespace RoomsCalendar.Server.Services
             }
         }
 
-        public ValueTask UpdateRoomsAsync<TRooms>(TRooms rooms, DateTimeOffset since, CancellationToken ct) where TRooms : IEnumerable<Room>
+        public ValueTask UpdateRoomsAsync(ReadOnlySpan<Room> rooms, DateTimeOffset since, CancellationToken ct)
         {
             lock (_rooms)
             {
@@ -44,21 +44,34 @@ namespace RoomsCalendar.Server.Services
                 {
                     CollectionsMarshal.SetCount(_rooms, idx);
                 }
+                _rooms.AddRange(rooms);
+                _rooms.Sort(RoomsExtensions.CompareToAvailableUntil);
+                LastUpdatedAt = DateTimeOffset.UtcNow;
+            }
+            return ValueTask.CompletedTask;
+        }
 
-                switch (rooms)
+        public ValueTask UpdateRoomsAsync<TRooms>(TRooms rooms, DateTimeOffset since, CancellationToken ct) where TRooms : IEnumerable<Room>
+        {
+            switch (rooms)
+            {
+                case Room[] array:
+                    return UpdateRoomsAsync(array.AsSpan(), since, ct);
+                case List<Room> list:
+                    return UpdateRoomsAsync(CollectionsMarshal.AsSpan(list), since, ct);
+                case ArraySegment<Room> arraySegment:
+                    return UpdateRoomsAsync(arraySegment.AsSpan(), since, ct);
+            }
+            lock (_rooms)
+            {
+                var idx = BinarySearch.LowerBound<Room, DateTimeOffset>(CollectionsMarshal.AsSpan(_rooms), since, RoomsExtensions.CompareAvailableUntil);
+                if (idx == 0)
                 {
-                    case Room[] array:
-                        _rooms.AddRange(array.AsSpan());
-                        break;
-                    case List<Room> list:
-                        _rooms.AddRange(CollectionsMarshal.AsSpan(list));
-                        break;
-                    case ArraySegment<Room> arraySegment:
-                        _rooms.AddRange(arraySegment.AsSpan());
-                        break;
-                    default:
-                        _rooms.AddRange(rooms);
-                        break;
+                    _rooms.Clear();
+                }
+                else if (idx > 0)
+                {
+                    CollectionsMarshal.SetCount(_rooms, idx);
                 }
                 _rooms.Sort(RoomsExtensions.CompareToAvailableUntil);
                 LastUpdatedAt = DateTimeOffset.UtcNow;

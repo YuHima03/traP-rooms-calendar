@@ -71,6 +71,26 @@ namespace RoomsCalendar.Server.Services
             return ValueTask.CompletedTask;
         }
 
+        public ValueTask UpdateRoomsAsync(ReadOnlySpan<Room> rooms, DateTimeOffset since, CancellationToken ct)
+        {
+            lock (_rooms)
+            {
+                var idx = BinarySearch.LowerBound<Room, DateTimeOffset>(CollectionsMarshal.AsSpan(_rooms), since, RoomsExtensions.CompareAvailableUntil);
+                if (idx == 0)
+                {
+                    _rooms.Clear();
+                }
+                else if (idx > 0)
+                {
+                    CollectionsMarshal.SetCount(_rooms, idx);
+                }
+                _rooms.AddRange(rooms);
+                _rooms.Sort(RoomsExtensions.CompareToAvailableUntil);
+                LastUpdatedAt = DateTimeOffset.UtcNow;
+            }
+            return ValueTask.CompletedTask;
+        }
+
         public ValueTask UpdateRoomsAsync<TRooms>(TRooms rooms, DateTimeOffset since, CancellationToken ct) where TRooms : IEnumerable<Room>
         {
             lock (_rooms)

@@ -1,13 +1,15 @@
 ﻿using Microsoft.Extensions.Options;
 using RoomsCalendar.Share;
 using RoomsCalendar.Share.Domain;
+using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using ZLinq;
 
 namespace RoomsCalendar.Server.Services
 {
     sealed class TitechRoomsCollector(
-        [FromKeyedServices(RoomProviderNames.TitechReserved)] IRoomsProvider dataProvider,
+        [FromKeyedServices(RoomProviderNames.TitechReserved)] IRoomsProvider reservedRoomsProvider,
+        [FromKeyedServices(RoomProviderNames.TitechVacant)] IRoomsProvider vacantRoomsProvider,
         IHttpClientFactory httpClientFactory,
         IOptions<TitechRoomsCollectorOptions> options,
         ILogger<TitechRoomsCollector> logger,
@@ -18,7 +20,7 @@ namespace RoomsCalendar.Server.Services
         [StringSyntax(StringSyntaxAttribute.DateTimeFormat)]
         const string DateTimeParseFormat = "yyyyMMddHHmm";
 
-        const string MatchTdContent = "サークル活動：デジタル創作同好会traP";
+        const string MatchEventName = "サークル活動：デジタル創作同好会traP";
 
         readonly AngleSharp.Html.Parser.HtmlParserOptions HtmlParserOptions = new()
         {
@@ -63,11 +65,32 @@ namespace RoomsCalendar.Server.Services
                 using var rooms = await ParseFetchResultAsync(await response.Content.ReadAsStreamAsync(ct), ct);
                 if (rooms.Size != 0)
                 {
-                    var timeZoneToday = TimeZoneInfo.ConvertTimeToUtc(
-                        TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, options.Value.TimeZoneInfo).Date,
-                        options.Value.TimeZoneInfo
-                    );
-                    await dataProvider.UpdateRoomsAsync(rooms.ArraySegment, timeZoneToday, ct);
+                    var buffer = ArrayPool<Room>.Shared.Rent(rooms.Size);
+                    try
+                    {
+                        var timeZoneToday = TimeZoneInfo.ConvertTimeToUtc(
+                            TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, options.Value.TimeZoneInfo).Date,
+                            options.Value.TimeZoneInfo
+                        );
+
+                        var reservedCnt = rooms
+                            .AsValueEnumerable()
+                            .Where(r => MatchEventName.Equals(r.EventName, StringComparison.InvariantCultureIgnoreCase))
+                            .Select(r => r.ToDomainRoom())
+                            .CopyTo(buffer.AsSpan());
+                        await reservedRoomsProvider.UpdateRoomsAsync((ReadOnlySpan<Room>)buffer.AsSpan(0, reservedCnt), timeZoneToday, ct);
+
+                        var vacantCnt = rooms
+                            .AsValueEnumerable()
+                            .Where(r => string.IsNullOrWhiteSpace(r.EventName))
+                            .Select(r => r.ToDomainRoom())
+                            .CopyTo(buffer.AsSpan());
+                        await vacantRoomsProvider.UpdateRoomsAsync((ReadOnlySpan<Room>)buffer.AsSpan(0, vacantCnt), timeZoneToday, ct);
+                    }
+                    finally
+                    {
+                        ArrayPool<Room>.Shared.Return(buffer, true);
+                    }
                 }
             }
             catch (Exception ex)
@@ -102,7 +125,7 @@ namespace RoomsCalendar.Server.Services
             }
         }
 
-        async ValueTask<PooledArray<Room>> ParseFetchResultAsync(Stream content, CancellationToken ct = default)
+        async ValueTask<PooledArray<TitechRoom>> ParseFetchResultAsync(Stream content, CancellationToken ct = default)
         {
             using var doc = await new AngleSharp.Html.Parser.HtmlParser(HtmlParserOptions).ParseDocumentAsync(content, ct);
             var mainContainer = doc.GetElementById("div");
@@ -114,7 +137,8 @@ namespace RoomsCalendar.Server.Services
             var timeZoneOffset = timeZoneInfo.BaseUtcOffset;
             return mainContainer.GetElementsByClassName("trRoom")
                 .AsValueEnumerable()
-                .SelectMany(e => {
+                .SelectMany(e =>
+                {
                     var placeName = e.GetElementsByClassName("spshow")
                         .FirstOrDefault(e => e.TagName.Equals(AngleSharp.Dom.TagNames.Th, StringComparison.OrdinalIgnoreCase))?
                         .GetElementsByTagName(AngleSharp.Dom.TagNames.Br)
@@ -124,10 +148,16 @@ namespace RoomsCalendar.Server.Services
                         .Trim();
                     return e.GetElementsByTagName(AngleSharp.Dom.TagNames.Td)
                         .AsValueEnumerable()
-                        .Where(e => e.TextContent == MatchTdContent)
-                        .GroupBy(e => e.GetAttribute("data-merge"))
-                        .Where(g => !string.IsNullOrWhiteSpace(g.Key) && g.Any())
-                        .Select(g => {
+                        .Where(e => string.IsNullOrWhiteSpace(e.TextContent) || MatchEventName.Equals(e.TextContent, StringComparison.OrdinalIgnoreCase))
+                        .GroupBy(e =>
+                        {
+                            var attr = e.GetAttribute("data-merge");
+                            return string.IsNullOrWhiteSpace(attr)
+                                ? 0L
+                                : long.Parse(attr);
+                        })
+                        .Select(g =>
+                        {
                             var (first, last) = (g.First(), g.Last());
                             DateTimeOffset timeStart = TimeZoneInfo.ConvertTimeToUtc(
                                 DateTime.ParseExact(first.GetAttribute("data-date") + first.GetAttribute("data-timefrom"), DateTimeParseFormat, null),
@@ -137,11 +167,36 @@ namespace RoomsCalendar.Server.Services
                                 DateTime.ParseExact(last.GetAttribute("data-date") + last.GetAttribute("data-timeto"), DateTimeParseFormat, null),
                                 timeZoneInfo
                             );
-                            return new Room(placeName!, timeStart.ToOffset(timeZoneOffset), timeEnd.ToOffset(timeZoneOffset));
+                            return new TitechRoom
+                            {
+                                EventName = first.TextContent,
+                                PlaceName = placeName!,
+                                MergeKey = g.Key,
+                                TimeFrom = timeStart,
+                                TimeTo = timeEnd
+                            };
                         })
                         .Where(r => !string.IsNullOrWhiteSpace(r.PlaceName));
                 })
                 .ToArrayPool();
+        }
+
+        readonly struct TitechRoom
+        {
+            public string? EventName { get; init; }
+
+            public long MergeKey { get; init; }
+
+            public required string PlaceName { get; init; }
+
+            public DateTimeOffset TimeFrom { get; init; }
+
+            public DateTimeOffset TimeTo { get; init; }
+
+            public Room ToDomainRoom()
+            {
+                return new Room(PlaceName, TimeFrom, TimeTo);
+            }
         }
     }
 
