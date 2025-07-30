@@ -6,16 +6,13 @@ using ZLinq;
 
 namespace RoomsCalendar.Server.Services
 {
-    /// <summary>
-    /// Provides room information fetched from Titech open data.
-    /// </summary>
-    sealed class TitechRoomsProvider : IRoomsProvider
+    sealed class RoomsProvider(string providerName) : IRoomsProvider
     {
         readonly List<Room> _rooms = [];
 
         public DateTimeOffset LastUpdatedAt { get; private set; }
 
-        public string ProviderName => RoomProviderNames.TitechReserved;
+        public required string ProviderName { get; init; } = providerName;
 
         public ValueTask<Room[]> GetRoomsAsync(DateTimeOffset since, DateTimeOffset until, CancellationToken ct)
         {

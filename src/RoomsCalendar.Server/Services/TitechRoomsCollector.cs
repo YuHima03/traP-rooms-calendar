@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Options;
+using RoomsCalendar.Share;
 using RoomsCalendar.Share.Domain;
 using System.Diagnostics.CodeAnalysis;
 using ZLinq;
@@ -6,7 +7,7 @@ using ZLinq;
 namespace RoomsCalendar.Server.Services
 {
     sealed class TitechRoomsCollector(
-        TitechRoomsProvider dataProvider,
+        [FromKeyedServices(RoomProviderNames.TitechReserved)] IRoomsProvider dataProvider,
         IHttpClientFactory httpClientFactory,
         IOptions<TitechRoomsCollectorOptions> options,
         ILogger<TitechRoomsCollector> logger,
@@ -112,8 +113,7 @@ namespace RoomsCalendar.Server.Services
             var timeZoneOffset = timeZoneInfo.BaseUtcOffset;
             return mainContainer.GetElementsByClassName("trRoom")
                 .AsValueEnumerable()
-                .SelectMany(e =>
-                {
+                .SelectMany(e => {
                     var placeName = e.GetElementsByClassName("spshow")
                         .FirstOrDefault(e => e.TagName.Equals(AngleSharp.Dom.TagNames.Th, StringComparison.OrdinalIgnoreCase))?
                         .GetElementsByTagName(AngleSharp.Dom.TagNames.Br)
@@ -126,8 +126,7 @@ namespace RoomsCalendar.Server.Services
                         .Where(e => e.TextContent == MatchTdContent)
                         .GroupBy(e => e.GetAttribute("data-merge"))
                         .Where(g => !string.IsNullOrWhiteSpace(g.Key) && g.Any())
-                        .Select(g =>
-                        {
+                        .Select(g => {
                             var (first, last) = (g.First(), g.Last());
                             DateTimeOffset timeStart = TimeZoneInfo.ConvertTimeToUtc(
                                 DateTime.ParseExact(first.GetAttribute("data-date") + first.GetAttribute("data-timefrom"), DateTimeParseFormat, null),

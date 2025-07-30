@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using RoomsCalendar.Server.Configurations;
 using RoomsCalendar.Server.Services;
@@ -78,8 +79,7 @@ namespace RoomsCalendar.Server
                         return new ConfigureNamedOptions<TitechRoomsCollectorOptions>(Options.DefaultName, o => config.ConfigureTitechRoomsCollectorOptions(o, sp.GetService<TimeZoneInfo>()));
                     })
                     .AddHostedService<TitechRoomsCollector>()
-                    .AddSingleton<TitechRoomsProvider>()
-                    .AddKeyedSingleton<IRoomsProvider, TitechRoomsProvider>(RoomProviderNames.TitechReserved, (sp, _) => sp.GetRequiredService<TitechRoomsProvider>());
+                    .AddKeyedSingleton<IRoomsProvider, RoomsProvider>(RoomProviderNames.TitechReserved, new RoomsProvider(RoomProviderNames.TitechReserved));
 
                 services.AddSingleton<RoomsCalendarProvider>();
 
