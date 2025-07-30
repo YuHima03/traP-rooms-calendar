@@ -159,12 +159,15 @@ namespace RoomsCalendar.Server.Services
                         .Select(g =>
                         {
                             var (first, last) = (g.First(), g.Last());
+
+                            Span<char> strBuffer = stackalloc char[DateTimeParseFormat.Length];
+
                             DateTimeOffset timeStart = TimeZoneInfo.ConvertTimeToUtc(
-                                DateTime.ParseExact(first.GetAttribute("data-date") + first.GetAttribute("data-timefrom"), DateTimeParseFormat, null),
+                                DateTime.ParseExact(GetDateTimeString(strBuffer, first.GetAttribute("data-date"), first.GetAttribute("data-timeto")), DateTimeParseFormat, null),
                                 timeZoneInfo
                             );
                             DateTimeOffset timeEnd = TimeZoneInfo.ConvertTimeToUtc(
-                                DateTime.ParseExact(last.GetAttribute("data-date") + last.GetAttribute("data-timeto"), DateTimeParseFormat, null),
+                                DateTime.ParseExact(GetDateTimeString(strBuffer, last.GetAttribute("data-date"), last.GetAttribute("data-timeto")), DateTimeParseFormat, null),
                                 timeZoneInfo
                             );
                             return new TitechRoom
@@ -179,6 +182,27 @@ namespace RoomsCalendar.Server.Services
                         .Where(r => !string.IsNullOrWhiteSpace(r.PlaceName));
                 })
                 .ToArrayPool();
+
+            static Span<char> GetDateTimeString(Span<char> buffer, string? date, string? time)
+            {
+                buffer.Fill('0');
+                if (!string.IsNullOrEmpty(date))
+                {
+                    date.CopyTo(buffer);
+                }
+                if (!string.IsNullOrEmpty(time))
+                {
+                    if (time.Length < 4)
+                    {
+                        time.CopyTo(buffer[^time.Length..]);
+                    }
+                    else
+                    {
+                        time.TryCopyTo(buffer[^4..]);
+                    }
+                }
+                return buffer;
+            }
         }
 
         readonly struct TitechRoom
