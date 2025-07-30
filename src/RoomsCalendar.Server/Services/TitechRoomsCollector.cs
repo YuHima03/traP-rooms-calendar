@@ -175,8 +175,8 @@ namespace RoomsCalendar.Server.Services
                                 EventName = first.TextContent,
                                 PlaceName = placeName!,
                                 MergeKey = g.Key,
-                                TimeFrom = timeStart,
-                                TimeTo = timeEnd
+                                TimeFrom = timeStart.ToOffset(timeZoneOffset),
+                                TimeTo = timeEnd.ToOffset(timeZoneOffset)
                             };
                         })
                         .Where(r => !string.IsNullOrWhiteSpace(r.PlaceName));
