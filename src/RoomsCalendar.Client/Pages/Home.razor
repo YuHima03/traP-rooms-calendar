@@ -38,47 +38,69 @@
 {
     <p>読み込み中......</p>
 }
-else if (GroupedRooms.Count == 0 && RoomsProvider.LastUpdatedAt != default)
+else if (RoomsProvider.LastUpdatedAt != default)
 {
-    <p>部屋情報がありません。</p>
-}
-else
-{
-    @foreach (var (date, rooms) in GroupedRooms)
+
+    if (GroupedRooms.Count == 0 && RoomsProvider.LastUpdatedAt != default)
     {
-        <div class="flex flex-col gap-y-3
-                                    md:flex-row md:flex-nowrap md:gap-x-4">
+        <p>部屋情報がありません。</p>
+    }
+    else
+    {
+        @if (!GroupedRooms.ContainsKey(JstToday))
+        {
+            <div class="flex flex-col gap-y-3
+                        md:flex-row md:flex-nowrap md:gap-x-4 md:items-center">
 
-            <div class="tx-body-strong w-[6rem] pt-2 shrink-0">
-                <h3>
-                    @{
-                        var diff = date.DayNumber - JstToday.DayNumber;
-                        if (diff == 0)
-                        {
-                            <span>今日</span>
+                <div class="tx-body-strong w-[6rem] shrink-0">
+                    <h3>
+                        今日
+                    </h3>
+                </div>
+                <p>
+                    本日は進捗部屋がありません。
+                </p>
+
+            </div>
+        }
+
+        @foreach (var (date, rooms) in GroupedRooms)
+        {
+            <div class="flex flex-col gap-y-3
+                        md:flex-row md:flex-nowrap md:gap-x-4">
+
+                <div class="tx-body-strong w-[6rem] md:pt-2 shrink-0">
+                    <h3>
+                        @{
+                            var diff = date.DayNumber - JstToday.DayNumber;
+                            if (diff == 0)
+                            {
+                                <span>今日</span>
+                            }
+                            else if (diff == 1)
+                            {
+                                <span>明日</span>
+                            }
+                            else
+                            {
+                                <span>@(string.Create(JapaneseCulture, $"{date:MM/dd (ddd)}"))</span>
+                            }
                         }
-                        else if (diff == 1)
-                        {
-                            <span>明日</span>
-                        }
-                        else
-                        {
-                            <span>@(string.Create(JapaneseCulture, $"{date:MM/dd (ddd)}"))</span>
-                        }
+                    </h3>
+                </div>
+                <div class="grid md:grid-cols-2 gap-3 grow">
+                    @foreach (var r in rooms)
+                    {
+                        <RoomCard PlaceName="@r.Key"
+                                  AvailableTimes="@([.. r.Value.Select(v => (v.Item1.Room.AvailableSince, v.Item1.Room.AvailableUntil))])"
+                                  Events="@([.. r.Value.SelectMany(v => v.Item1.HeldEvents)])"
+                                  IsKnoqRegistered="@r.Value.Aggregate(false, (acc, v) => acc || v.KnoqRegistered)" />
                     }
-                </h3>
-            </div>
-            <div class="grid md:grid-cols-2 gap-3 grow">
-                @foreach (var r in rooms)
-                {
-                    <RoomCard PlaceName="@r.Key"
-                              AvailableTimes="@([.. r.Value.Select(v => (v.Item1.Room.AvailableSince, v.Item1.Room.AvailableUntil))])"
-                              Events="@([.. r.Value.SelectMany(v => v.Item1.HeldEvents)])"
-                              IsKnoqRegistered="@r.Value.Aggregate(false, (acc, v) => acc || v.KnoqRegistered)" />
-                }
-            </div>
+                </div>
 
-        </div>
+            </div>
+        }
+
     }
 }
 
@@ -151,10 +173,10 @@ else
             foreach (var r in kr)
             {
                 RoomWithEvents item = new()
-                {
-                    Room = r,
-                    HeldEvents = (await EventsProvider.GetEventsAsync(r.AvailableSince, r.AvailableUntil, CancellationToken.None)).Where(e => e.PlaceName.Equals(r.PlaceName, StringComparison.OrdinalIgnoreCase))
-                };
+                    {
+                        Room = r,
+                        HeldEvents = (await EventsProvider.GetEventsAsync(r.AvailableSince, r.AvailableUntil, CancellationToken.None)).Where(e => e.PlaceName.Equals(r.PlaceName, StringComparison.OrdinalIgnoreCase))
+                    };
                 if (rooms.TryGetValue(r.PlaceName, out var list))
                 {
                     list.Add((item, true));
@@ -174,10 +196,10 @@ else
             foreach (var r in tr.Value)
             {
                 RoomWithEvents item = new()
-                {
-                    Room = r,
-                    HeldEvents = []
-                };
+                    {
+                        Room = r,
+                        HeldEvents = []
+                    };
                 if (rooms.TryGetValue(r.PlaceName, out var list))
                 {
                     list.Add((item, false));
