@@ -1,0 +1,35 @@
+﻿@page "/vacancies"
+@inject TimeZoneInfo TimeZone
+
+<div class="flex flex-col gap-y-4">
+
+    <h2>空き教室 (β版)</h2>
+
+    <div class="grid md:grid-cols-2 gap-3 grow">
+        @foreach (var r in rooms)
+        {
+            <RoomCard PlaceName="@r.PlaceName"
+                      AvailableTimes="@([(r.AvailableSince, r.AvailableUntil)])" />
+        }
+    </div>
+
+</div>
+
+@code {
+    [Inject(Key = Share.RoomProviderNames.TitechVacant)]
+    IRoomsProvider? VacantRoomsProvider { get; set; }
+
+    Room[] rooms = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (VacantRoomsProvider is not null)
+        {
+            var timeZoneToday = TimeZoneInfo.ConvertTimeToUtc(
+                TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZone).Date,
+                TimeZone
+            );
+            rooms = await VacantRoomsProvider.GetRoomsAsync(timeZoneToday, timeZoneToday.AddDays(1).AddTicks(-1), CancellationToken.None);
+        }
+    }
+}
