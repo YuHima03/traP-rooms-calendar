@@ -1,5 +1,4 @@
-﻿using RoomsCalendar.Share;
-using RoomsCalendar.Share.Domain;
+﻿using RoomsCalendar.Share.Domain;
 using System.Runtime.InteropServices;
 using Yuh.Collections.Searching;
 using ZLinq;
@@ -12,7 +11,7 @@ namespace RoomsCalendar.Server.Services
 
         public DateTimeOffset LastUpdatedAt { get; private set; }
 
-        public required string ProviderName { get; init; } = providerName;
+        public string ProviderName { get; } = providerName;
 
         public ValueTask<Room[]> GetRoomsAsync(DateTimeOffset since, DateTimeOffset until, CancellationToken ct)
         {
