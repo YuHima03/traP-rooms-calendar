@@ -122,6 +122,8 @@ namespace RoomsCalendar.Server
                 app.UseExceptionHandler("/Error");
             }
 
+            app.UseHttpsRedirection();
+
             app.UseAntiforgery();
 
             var handler = new Handlers.Handler();
