@@ -3,6 +3,7 @@ using RoomsCalendar.Share;
 using RoomsCalendar.Share.Domain;
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using ZLinq;
 
 namespace RoomsCalendar.Server.Services
@@ -148,38 +149,41 @@ namespace RoomsCalendar.Server.Services
                         .Trim();
                     return e.GetElementsByTagName(AngleSharp.Dom.TagNames.Td)
                         .AsValueEnumerable()
-                        .Where(e => string.IsNullOrWhiteSpace(e.TextContent) || MatchEventName.Equals(e.TextContent, StringComparison.OrdinalIgnoreCase))
-                        .GroupBy(e =>
+                        .Where(e => string.IsNullOrWhiteSpace(e.TextContent) || e.TextContent.AsSpan().Trim().Equals(MatchEventName, StringComparison.OrdinalIgnoreCase))
+                        .Select(e =>
                         {
-                            var attr = e.GetAttribute("data-merge");
-                            return string.IsNullOrWhiteSpace(attr)
-                                ? 0L
-                                : long.Parse(attr);
-                        })
-                        .Select(g =>
-                        {
-                            var (first, last) = (g.First(), g.Last());
-
+                            var mergeKeyString = e.GetAttribute("data-merge");
+                            var dateString = e.GetAttribute("data-date");
                             Span<char> strBuffer = stackalloc char[DateTimeParseFormat.Length];
-
                             DateTimeOffset timeStart = TimeZoneInfo.ConvertTimeToUtc(
-                                DateTime.ParseExact(GetDateTimeString(strBuffer, first.GetAttribute("data-date"), first.GetAttribute("data-timeto")), DateTimeParseFormat, null),
+                                DateTime.ParseExact(GetDateTimeString(strBuffer, dateString, e.GetAttribute("data-timefrom")), DateTimeParseFormat, null),
                                 timeZoneInfo
                             );
                             DateTimeOffset timeEnd = TimeZoneInfo.ConvertTimeToUtc(
-                                DateTime.ParseExact(GetDateTimeString(strBuffer, last.GetAttribute("data-date"), last.GetAttribute("data-timeto")), DateTimeParseFormat, null),
+                                DateTime.ParseExact(GetDateTimeString(strBuffer, dateString, e.GetAttribute("data-timeto")), DateTimeParseFormat, null),
                                 timeZoneInfo
                             );
                             return new TitechRoom
                             {
-                                EventName = first.TextContent,
+                                EventName = e.TextContent.Trim(),
                                 PlaceName = placeName!,
-                                MergeKey = g.Key,
+                                MergeKey = string.IsNullOrWhiteSpace(mergeKeyString) ? 0L : long.Parse(mergeKeyString),
                                 TimeFrom = timeStart.ToOffset(timeZoneOffset),
                                 TimeTo = timeEnd.ToOffset(timeZoneOffset)
                             };
                         })
-                        .Where(r => !string.IsNullOrWhiteSpace(r.PlaceName));
+                        .Where(r => !string.IsNullOrWhiteSpace(r.PlaceName))
+                        .SelectMerged(
+                            determiner: (x, y) => x.EventName == y.EventName,
+                            aggregator: (x, y) => new TitechRoom
+                            {
+                                EventName = x.EventName,
+                                PlaceName = x.PlaceName,
+                                MergeKey = x.MergeKey,
+                                TimeFrom = x.TimeFrom < y.TimeFrom ? x.TimeFrom : y.TimeFrom,
+                                TimeTo = x.TimeTo > y.TimeTo ? x.TimeTo : y.TimeTo
+                            }
+                        );
                 })
                 .ToArrayPool();
 
@@ -237,5 +241,94 @@ namespace RoomsCalendar.Server.Services
         TimeSpan IPeriodicBackgroundServiceOptions.Period => FetchInterval;
 
         bool IPeriodicBackgroundServiceOptions.RecoverOnException => false;
+    }
+
+    file static class ValueEnumerableExtensions
+    {
+        public static ValueEnumerable<SelectMergedItr<TEnumerator, T>, T> SelectMerged<TEnumerator, T>(this ValueEnumerable<TEnumerator, T> source, Func<T, T, bool> determiner, Func<T, T, T> aggregator)
+            where TEnumerator : struct, IValueEnumerator<T>, allows ref struct
+        {
+            return new ValueEnumerable<SelectMergedItr<TEnumerator, T>, T>(
+                new SelectMergedItr<TEnumerator, T>(source.Enumerator, determiner, aggregator)
+            );
+        }
+
+        public ref struct SelectMergedItr<TEnumerator, TSource> : IValueEnumerator<TSource>
+            where TEnumerator : struct, IValueEnumerator<TSource>, allows ref struct
+        {
+            TEnumerator source;
+            readonly Func<TSource, TSource, bool> determiner;
+            readonly Func<TSource, TSource, TSource> aggregator;
+
+            byte status = 0; // 0: not initialized, 1: initialized, 2: completed
+            TSource accumulate;
+
+            public SelectMergedItr(TEnumerator source, Func<TSource, TSource, bool> determiner, Func<TSource, TSource, TSource> aggregator)
+            {
+                this.source = source;
+                this.determiner = determiner;
+                this.aggregator = aggregator;
+                Unsafe.SkipInit(out accumulate);
+            }
+
+            public readonly void Dispose()
+            {
+                source.Dispose();
+            }
+
+            public readonly bool TryCopyTo(scoped Span<TSource> destination, Index offset)
+            {
+                return false;
+            }
+
+            public bool TryGetNext(out TSource current)
+            {
+                switch (status)
+                {
+                    case 0:
+                        if (!source.TryGetNext(out accumulate))
+                        {
+                            Unsafe.SkipInit(out current);
+                            return false;
+                        }
+                        status = 1;
+                        goto case 1;
+
+                    case 1:
+                        while (source.TryGetNext(out var next))
+                        {
+                            if (!determiner(accumulate, next))
+                            {
+                                current = accumulate;
+                                accumulate = next;
+                                return true;
+                            }
+                            else
+                            {
+                                accumulate = aggregator(accumulate, next);
+                            }
+                        }
+                        status = 2;
+                        current = accumulate;
+                        return true;
+
+                    default:
+                        Unsafe.SkipInit(out current);
+                        return false;
+                }
+            }
+
+            public readonly bool TryGetNonEnumeratedCount(out int count)
+            {
+                count = default;
+                return false;
+            }
+
+            public readonly bool TryGetSpan(out ReadOnlySpan<TSource> span)
+            {
+                span = default;
+                return false;
+            }
+        }
     }
 }
