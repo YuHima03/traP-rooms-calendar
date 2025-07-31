@@ -1,5 +1,6 @@
 ﻿@page "/"
 @using System.Diagnostics.CodeAnalysis
+@using RoomsCalendar.Share.Constants
 @inject IServiceProvider Services
 @inject RoomsCalendar.Share.Domain.IEventsProvider EventsProvider
 @inject TimeZoneInfo TimeZone
@@ -135,11 +136,11 @@ else if (RoomsProvider.LastUpdatedAt != default)
 </AlertCard>
 
 @code {
-    [Inject(Key = Share.RoomProviderNames.KnoqRegistered)]
+    [Inject(Key = RoomsProviderNames.KnoqRegistered)]
     [NotNull]
     IRoomsProvider? RoomsProvider { get; set; }
 
-    [Inject(Key = Share.RoomProviderNames.TitechReserved)]
+    [Inject(Key = RoomsProviderNames.TitechReserved)]
     [NotNull]
     IRoomsProvider? TitechRoomsProvider { get; set; }
 

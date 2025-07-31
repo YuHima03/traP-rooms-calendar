@@ -7,8 +7,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using RoomsCalendar.Server.Configurations;
 using RoomsCalendar.Server.Services;
-using RoomsCalendar.Share;
 using RoomsCalendar.Share.Configuration;
+using RoomsCalendar.Share.Constants;
 using RoomsCalendar.Share.Domain;
 using Traq;
 
@@ -69,7 +69,7 @@ namespace RoomsCalendar.Server
                     .AddHostedService<RoomsAndEventsCollector>()
                     .AddSingleton<RoomsAndEventsProvider>()
                     .AddSingleton(sp => sp.GetRequiredService<RoomsAndEventsProvider>() as IEventsProvider)
-                    .AddKeyedSingleton<IRoomsProvider, RoomsAndEventsProvider>(RoomProviderNames.KnoqRegistered, (sp, _) => sp.GetRequiredService<RoomsAndEventsProvider>());
+                    .AddKeyedSingleton<IRoomsProvider, RoomsAndEventsProvider>(RoomsProviderNames.KnoqRegistered, (sp, _) => sp.GetRequiredService<RoomsAndEventsProvider>());
                 services
                     .Configure<TitechRoomsCollectorConfiguration>(builder.Configuration)
                     .AddSingleton<IConfigureOptions<TitechRoomsCollectorOptions>>(sp =>
@@ -78,8 +78,8 @@ namespace RoomsCalendar.Server
                         return new ConfigureNamedOptions<TitechRoomsCollectorOptions>(Options.DefaultName, o => config.ConfigureTitechRoomsCollectorOptions(o, sp.GetService<TimeZoneInfo>()));
                     })
                     .AddHostedService<TitechRoomsCollector>();
-                services.Add(new ServiceDescriptor(typeof(IRoomsProvider), RoomProviderNames.TitechReserved, new RoomsProvider(RoomProviderNames.TitechReserved)));
-                services.Add(new ServiceDescriptor(typeof(IRoomsProvider), RoomProviderNames.TitechVacant, new RoomsProvider(RoomProviderNames.TitechVacant)));
+                services.Add(new ServiceDescriptor(typeof(IRoomsProvider), RoomsProviderNames.TitechReserved, new RoomsProvider(RoomsProviderNames.TitechReserved)));
+                services.Add(new ServiceDescriptor(typeof(IRoomsProvider), RoomsProviderNames.TitechVacant, new RoomsProvider(RoomsProviderNames.TitechVacant)));
 
                 services.AddHostedService<MemoryMonitoringService>();
 

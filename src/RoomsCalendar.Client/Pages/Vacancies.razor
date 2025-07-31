@@ -1,4 +1,5 @@
 ﻿@page "/vacancies"
+@using RoomsCalendar.Share.Constants
 @inject TimeZoneInfo TimeZone
 
 <div class="flex flex-col gap-y-4">
@@ -6,7 +7,7 @@
     <h2>空き教室 (β版)</h2>
 
     <div class="grid md:grid-cols-2 gap-3 grow">
-        @foreach (var r in rooms)
+        @foreach (var r in roomsVacantNow)
         {
             <RoomCard PlaceName="@r.PlaceName"
                       AvailableTimes="@([(r.AvailableSince, r.AvailableUntil)])" />
@@ -16,10 +17,10 @@
 </div>
 
 @code {
-    [Inject(Key = Share.RoomProviderNames.TitechVacant)]
+    [Inject(Key = RoomsProviderNames.TitechVacant)]
     IRoomsProvider? VacantRoomsProvider { get; set; }
 
-    Room[] rooms = [];
+    Room[] roomsVacantNow = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -29,7 +30,8 @@
                 TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZone).Date,
                 TimeZone
             );
-            rooms = await VacantRoomsProvider.GetRoomsAsync(timeZoneToday, timeZoneToday.AddDays(1).AddTicks(-1), CancellationToken.None);
+            var utcNow = DateTimeOffset.UtcNow.AddHours(-6);
+            roomsVacantNow = await VacantRoomsProvider.GetRoomsAsync(utcNow, utcNow, CancellationToken.None);
         }
     }
 }

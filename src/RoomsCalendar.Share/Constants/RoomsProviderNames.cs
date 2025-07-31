@@ -1,6 +1,6 @@
-﻿namespace RoomsCalendar.Share
+﻿namespace RoomsCalendar.Share.Constants
 {
-    public static class RoomProviderNames
+    public static class RoomsProviderNames
     {
         public const string KnoqRegistered = "Providers:KnoqRegistered";
 

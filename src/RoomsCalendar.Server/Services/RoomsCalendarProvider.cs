@@ -1,4 +1,4 @@
-﻿using RoomsCalendar.Share;
+﻿using RoomsCalendar.Share.Constants;
 using RoomsCalendar.Share.Domain;
 using System.Runtime.CompilerServices;
 using ZLinq;
@@ -6,7 +6,7 @@ using ZLinq;
 namespace RoomsCalendar.Server.Services
 {
     sealed class RoomsCalendarProvider(
-        [FromKeyedServices(RoomProviderNames.KnoqRegistered)] IRoomsProvider roomsProvider,
+        [FromKeyedServices(RoomsProviderNames.KnoqRegistered)] IRoomsProvider roomsProvider,
         TimeZoneInfo? calendarTimeZone = null)
     {
         Ical.Net.Serialization.CalendarSerializer CalendarSerializer { get; init; } = new();

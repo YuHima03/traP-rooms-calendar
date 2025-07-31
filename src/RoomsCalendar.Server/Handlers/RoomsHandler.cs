@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using RoomsCalendar.Server.Services;
-using RoomsCalendar.Share;
+using RoomsCalendar.Share.Constants;
 using RoomsCalendar.Share.Domain;
 
 namespace RoomsCalendar.Server.Handlers
@@ -13,7 +13,7 @@ namespace RoomsCalendar.Server.Handlers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         async ValueTask<Results<Ok<Room[]>, BadRequest<string>>> GetRoomsAsync(
             HttpContext ctx,
-            [FromKeyedServices(RoomProviderNames.KnoqRegistered)] IRoomsProvider roomsProvider,
+            [FromKeyedServices(RoomsProviderNames.KnoqRegistered)] IRoomsProvider roomsProvider,
             [FromQuery(Name = "since")] DateTimeOffset? since = null,
             [FromQuery(Name = "until")] DateTimeOffset? until = null)
         {

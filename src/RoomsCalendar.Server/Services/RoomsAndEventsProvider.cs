@@ -1,4 +1,4 @@
-﻿using RoomsCalendar.Share;
+﻿using RoomsCalendar.Share.Constants;
 using RoomsCalendar.Share.Domain;
 using System.Runtime.InteropServices;
 using Yuh.Collections.Searching;
@@ -13,7 +13,7 @@ namespace RoomsCalendar.Server.Services
 
         public DateTimeOffset LastUpdatedAt { get; private set; }
 
-        public string ProviderName => RoomProviderNames.KnoqRegistered;
+        public string ProviderName => RoomsProviderNames.KnoqRegistered;
 
         public ValueTask<Event[]> GetEventsAsync(DateTimeOffset since, DateTimeOffset until, CancellationToken ct)
         {

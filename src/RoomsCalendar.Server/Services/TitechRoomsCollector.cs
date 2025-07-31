@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Options;
-using RoomsCalendar.Share;
+using RoomsCalendar.Share.Constants;
 using RoomsCalendar.Share.Domain;
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
@@ -9,8 +9,8 @@ using ZLinq;
 namespace RoomsCalendar.Server.Services
 {
     sealed class TitechRoomsCollector(
-        [FromKeyedServices(RoomProviderNames.TitechReserved)] IRoomsProvider reservedRoomsProvider,
-        [FromKeyedServices(RoomProviderNames.TitechVacant)] IRoomsProvider vacantRoomsProvider,
+        [FromKeyedServices(RoomsProviderNames.TitechReserved)] IRoomsProvider reservedRoomsProvider,
+        [FromKeyedServices(RoomsProviderNames.TitechVacant)] IRoomsProvider vacantRoomsProvider,
         IHttpClientFactory httpClientFactory,
         IOptions<TitechRoomsCollectorOptions> options,
         ILogger<TitechRoomsCollector> logger,
