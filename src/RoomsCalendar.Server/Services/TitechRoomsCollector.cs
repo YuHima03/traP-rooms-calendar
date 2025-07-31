@@ -140,12 +140,10 @@ namespace RoomsCalendar.Server.Services
                 .AsValueEnumerable()
                 .SelectMany(e =>
                 {
-                    var placeName = e.GetElementsByClassName("spshow")
-                        .FirstOrDefault(e => e.TagName.Equals(AngleSharp.Dom.TagNames.Th, StringComparison.OrdinalIgnoreCase))?
-                        .GetElementsByTagName(AngleSharp.Dom.TagNames.Br)
-                        .FirstOrDefault()?
-                        .NextSibling?
-                        .TextContent
+                    var placeName = e.GetElementsByTagName(AngleSharp.Dom.TagNames.Th)
+                        .ElementAtOrDefault(2)
+                        ?.FirstChild
+                        ?.TextContent
                         .Trim();
                     return e.GetElementsByTagName(AngleSharp.Dom.TagNames.Td)
                         .AsValueEnumerable()
