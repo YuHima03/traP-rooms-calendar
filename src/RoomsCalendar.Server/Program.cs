@@ -7,8 +7,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using RoomsCalendar.Server.Configurations;
 using RoomsCalendar.Server.Services;
-using RoomsCalendar.Share;
 using RoomsCalendar.Share.Configuration;
+using RoomsCalendar.Share.Constants;
 using RoomsCalendar.Share.Domain;
 using Traq;
 
@@ -69,7 +69,7 @@ namespace RoomsCalendar.Server
                     .AddHostedService<RoomsAndEventsCollector>()
                     .AddSingleton<RoomsAndEventsProvider>()
                     .AddSingleton(sp => sp.GetRequiredService<RoomsAndEventsProvider>() as IEventsProvider)
-                    .AddKeyedSingleton<IRoomsProvider, RoomsAndEventsProvider>(ProviderNames.Knoq, (sp, _) => sp.GetRequiredService<RoomsAndEventsProvider>());
+                    .AddKeyedSingleton<IRoomsProvider, RoomsAndEventsProvider>(RoomsProviderNames.KnoqRegistered, (sp, _) => sp.GetRequiredService<RoomsAndEventsProvider>());
                 services
                     .Configure<TitechRoomsCollectorConfiguration>(builder.Configuration)
                     .AddSingleton<IConfigureOptions<TitechRoomsCollectorOptions>>(sp =>
@@ -77,9 +77,9 @@ namespace RoomsCalendar.Server
                         var config = sp.GetRequiredService<IOptions<TitechRoomsCollectorConfiguration>>().Value;
                         return new ConfigureNamedOptions<TitechRoomsCollectorOptions>(Options.DefaultName, o => config.ConfigureTitechRoomsCollectorOptions(o, sp.GetService<TimeZoneInfo>()));
                     })
-                    .AddHostedService<TitechRoomsCollector>()
-                    .AddSingleton<TitechRoomsProvider>()
-                    .AddKeyedSingleton<IRoomsProvider, TitechRoomsProvider>(ProviderNames.Titech, (sp, _) => sp.GetRequiredService<TitechRoomsProvider>());
+                    .AddHostedService<TitechRoomsCollector>();
+                services.Add(new ServiceDescriptor(typeof(IRoomsProvider), RoomsProviderNames.TitechReserved, new RoomsProvider(RoomsProviderNames.TitechReserved)));
+                services.Add(new ServiceDescriptor(typeof(IRoomsProvider), RoomsProviderNames.TitechVacant, new RoomsProvider(RoomsProviderNames.TitechVacant)));
 
                 services.AddHostedService<MemoryMonitoringService>();
 
@@ -121,6 +121,8 @@ namespace RoomsCalendar.Server
             {
                 app.UseExceptionHandler("/Error");
             }
+
+            app.UseHttpsRedirection();
 
             app.UseAntiforgery();
 

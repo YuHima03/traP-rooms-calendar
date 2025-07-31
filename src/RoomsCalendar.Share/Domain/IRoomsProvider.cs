@@ -8,6 +8,8 @@
 
         public ValueTask<Room[]> GetRoomsAsync(DateTimeOffset since, DateTimeOffset until, CancellationToken ct);
 
+        public ValueTask UpdateRoomsAsync(ReadOnlySpan<Room> rooms, DateTimeOffset since, CancellationToken ct);
+
         public ValueTask UpdateRoomsAsync<TRooms>(TRooms rooms, DateTimeOffset since, CancellationToken ct) where TRooms : IEnumerable<Room>;
     }
 }
