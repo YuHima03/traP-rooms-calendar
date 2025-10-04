@@ -250,7 +250,7 @@ else if (RoomsProvider.LastUpdatedAt != default)
 
         async ValueTask<IEnumerable<Event>> GetHeldEventsAsync(Room r, CancellationToken ct)
         {
-            return (await EventsProvider.GetEventsAsync(r.AvailableSince, r.AvailableUntil, CancellationToken.None)).Where(e => e.PlaceName.Equals(r.PlaceName, StringComparison.OrdinalIgnoreCase));
+            return (await EventsProvider.GetEventsAsync(r.AvailableSince, r.AvailableUntil, ct)).Where(e => e.PlaceName.Equals(r.PlaceName, StringComparison.OrdinalIgnoreCase));
         }
 
         static bool SpanAny<T>(ReadOnlySpan<T> span, Predicate<T> predicate)
