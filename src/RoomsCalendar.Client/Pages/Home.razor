@@ -1,6 +1,7 @@
 ﻿@page "/"
 @using System.Diagnostics.CodeAnalysis
 @using RoomsCalendar.Share.Constants
+@using ZLinq
 @inject IServiceProvider Services
 @inject RoomsCalendar.Share.Domain.IEventsProvider EventsProvider
 @inject TimeZoneInfo TimeZone
@@ -51,7 +52,7 @@ else if (RoomsProvider.LastUpdatedAt != default)
         @if (!GroupedRooms.ContainsKey(JstToday))
         {
             <div class="flex flex-col gap-y-3
-                        md:flex-row md:flex-nowrap md:gap-x-4 md:items-center">
+                                                                                                                                    md:flex-row md:flex-nowrap md:gap-x-4 md:items-center">
 
                 <div class="tx-body-strong w-[6rem] shrink-0">
                     <h3>
@@ -68,7 +69,7 @@ else if (RoomsProvider.LastUpdatedAt != default)
         @foreach (var (date, rooms) in GroupedRooms)
         {
             <div class="flex flex-col gap-y-3
-                        md:flex-row md:flex-nowrap md:gap-x-4">
+                                                                                                                                    md:flex-row md:flex-nowrap md:gap-x-4">
 
                 <div class="tx-body-strong w-[6rem] md:pt-2 shrink-0">
                     <h3>
@@ -150,64 +151,94 @@ else if (RoomsProvider.LastUpdatedAt != default)
 
     readonly static System.Globalization.CultureInfo JapaneseCulture = new("ja-JP", false);
 
-    protected override async Task OnInitializedAsync()
+    async ValueTask InitializeGroupedRoomsAsync(CancellationToken ct)
     {
         var since = DateTime.UtcNow.AddHours(9).Date.AddHours(-9);
-        var knoqRooms = (await RoomsProvider.GetRoomsAsync(since, DateTimeOffset.MaxValue, CancellationToken.None)).GroupBy(DateOnlyKeySelector);
-        var titechRooms = (await TitechRoomsProvider.GetRoomsAsync(since, DateTimeOffset.MaxValue, CancellationToken.None)).GroupBy(DateOnlyKeySelector).ToDictionary(g => g.Key, g => g.ToList());
-
-        foreach (var kr in knoqRooms.Where(kr => titechRooms.ContainsKey(kr.Key)))
-        {
-            foreach (var r in kr)
-            {
-                titechRooms[kr.Key].RemoveAll(x => x.PlaceName == r.PlaceName && r.AvailableSince <= x.AvailableSince && x.AvailableUntil <= r.AvailableUntil);
-            }
-        }
+        var titechRooms = (await TitechRoomsProvider.GetRoomsAsync(since, DateTimeOffset.MaxValue, CancellationToken.None)).GroupBy(DateOnlyKeySelector); // Prioritize room information from university website.
+        var knoqRooms = (await RoomsProvider.GetRoomsAsync(since, DateTimeOffset.MaxValue, CancellationToken.None)).GroupBy(DateOnlyKeySelector).ToDictionary(g => g.Key);
 
         GroupedRooms = [];
-        foreach (var kr in knoqRooms)
+
+        foreach (var dateRooms in titechRooms)
         {
-            if (!GroupedRooms.TryGetValue(kr.Key, out var rooms))
+            var date = dateRooms.Key;
+
+            if (!knoqRooms.TryGetValue(date, out var knoqDateRooms))
             {
-                rooms = (GroupedRooms[kr.Key] = []);
+                // All rooms at the date are not registered to the knoQ service.
+                GroupedRooms[date] = dateRooms
+                    .GroupBy(r => r.PlaceName)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.AsValueEnumerable()
+                            .Select(r => ValueTuple.Create(new RoomWithEvents { Room = r, HeldEvents = [] }, false))
+                            .ToList());
+                continue;
             }
-            foreach (var r in kr)
+
+            var destDateRooms = (GroupedRooms[date] = []);
+            foreach (var placeRooms in dateRooms.GroupBy(r => r.PlaceName))
             {
-                RoomWithEvents item = new()
+                var placeName = placeRooms.Key;
+                using var knoqPlaceRooms = knoqDateRooms.AsValueEnumerable().Where(r => r.PlaceName == placeName).ToArrayPool();
+
+                var destPlaceRooms = (destDateRooms[placeName] = []);
+                foreach (var r in placeRooms)
+                {
+                    if (SpanAny<Room>(knoqPlaceRooms.Span, kr => kr.AvailableSince == r.AvailableSince && kr.AvailableUntil == r.AvailableUntil))
                     {
-                        Room = r,
-                        HeldEvents = (await EventsProvider.GetEventsAsync(r.AvailableSince, r.AvailableUntil, CancellationToken.None)).Where(e => e.PlaceName.Equals(r.PlaceName, StringComparison.OrdinalIgnoreCase))
-                    };
-                if (rooms.TryGetValue(r.PlaceName, out var list))
-                {
-                    list.Add((item, true));
-                }
-                else
-                {
-                    rooms[r.PlaceName] = [(item, true)];
+                        // The room is correctly registered to the knoQ service.
+                        destPlaceRooms.Add(ValueTuple.Create(
+                            new RoomWithEvents
+                            {
+                                Room = r,
+                                HeldEvents = await GetHeldEventsAsync(r, ct)
+                            },
+                            true
+                        ));
+                    }
+                    else
+                    {
+                        // The room is not registered to the knoQ service.
+                        destPlaceRooms.Add(ValueTuple.Create(
+                            new RoomWithEvents
+                            {
+                                Room = r,
+                                HeldEvents = []
+                            },
+                            false
+                        ));
+                    }
                 }
             }
         }
-        foreach (var tr in titechRooms.Where(tr => tr.Value.Count != 0))
+
+        // TitechRoomsCollector retrieves room data up to next week, so we also use knoQ data beyond next week.
+        var useKnoqSince = DateOnly.FromDateTime(since.AddDays(7).AddHours(9));
+        foreach (var dateRooms in knoqRooms.Where(kr => kr.Key >= useKnoqSince))
         {
-            if (!GroupedRooms.TryGetValue(tr.Key, out var rooms))
+            var date = dateRooms.Key;
+            var destDateRooms = GroupedRooms.TryGetValue(date, out var _dr)
+                ? _dr
+                : (GroupedRooms[date] = []);
+
+            foreach (var r in dateRooms.Value)
             {
-                rooms = (GroupedRooms[tr.Key] = []);
-            }
-            foreach (var r in tr.Value)
-            {
-                RoomWithEvents item = new()
+                var item = ValueTuple.Create(
+                    new RoomWithEvents
                     {
                         Room = r,
-                        HeldEvents = []
-                    };
-                if (rooms.TryGetValue(r.PlaceName, out var list))
+                        HeldEvents = await GetHeldEventsAsync(r, ct)
+                    },
+                    true
+                );
+                if (destDateRooms.TryGetValue(r.PlaceName, out var destPlaceRooms))
                 {
-                    list.Add((item, false));
+                    destPlaceRooms.Add(item);
                 }
                 else
                 {
-                    rooms[r.PlaceName] = [(item, false)];
+                    destDateRooms[r.PlaceName] = [item];
                 }
             }
         }
@@ -216,6 +247,28 @@ else if (RoomsProvider.LastUpdatedAt != default)
         {
             return DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(r.AvailableSince.UtcDateTime, TimeZone));
         }
+
+        async ValueTask<IEnumerable<Event>> GetHeldEventsAsync(Room r, CancellationToken ct)
+        {
+            return (await EventsProvider.GetEventsAsync(r.AvailableSince, r.AvailableUntil, CancellationToken.None)).Where(e => e.PlaceName.Equals(r.PlaceName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        static bool SpanAny<T>(ReadOnlySpan<T> span, Predicate<T> predicate)
+        {
+            for (int i = 0; i < span.Length; i++)
+            {
+                if (predicate(span[i]))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await InitializeGroupedRoomsAsync(CancellationToken.None);
     }
 
     sealed class RoomWithEvents
