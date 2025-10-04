@@ -49,6 +49,23 @@ else if (Type == AlertType.Tips)
         </div>
     </div>
 }
+else if (Type == AlertType.Warning)
+{
+    <div class="grow flex flex-col gap-y-4 p-4 rounded-xl text-warning-primary bg-warning-primary border-1 border-default-secondary">
+        @if (!string.IsNullOrEmpty(Title))
+        {
+            <div class="flex flex-row flex-nowrap gap-x-2 items-center">
+                <Icon Name="warning" />
+                <h3 class="tx-body-strong text-inherit">
+                    @Title
+                </h3>
+            </div>
+        }
+        <div class="flex flex-col gap-y-3">
+            @ChildContent
+        </div>
+    </div>
+}
 
 @code {
     [Parameter]

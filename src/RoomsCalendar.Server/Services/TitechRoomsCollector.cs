@@ -1,12 +1,16 @@
 ﻿using Microsoft.Extensions.Options;
+using RoomsCalendar.Share.Constants;
 using RoomsCalendar.Share.Domain;
+using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using ZLinq;
 
 namespace RoomsCalendar.Server.Services
 {
     sealed class TitechRoomsCollector(
-        TitechRoomsProvider dataProvider,
+        [FromKeyedServices(RoomsProviderNames.TitechReserved)] IRoomsProvider reservedRoomsProvider,
+        [FromKeyedServices(RoomsProviderNames.TitechVacant)] IRoomsProvider vacantRoomsProvider,
         IHttpClientFactory httpClientFactory,
         IOptions<TitechRoomsCollectorOptions> options,
         ILogger<TitechRoomsCollector> logger,
@@ -17,7 +21,7 @@ namespace RoomsCalendar.Server.Services
         [StringSyntax(StringSyntaxAttribute.DateTimeFormat)]
         const string DateTimeParseFormat = "yyyyMMddHHmm";
 
-        const string MatchTdContent = "サークル活動：デジタル創作同好会traP";
+        const string MatchEventName = "デジタル創作同好会traP";
 
         readonly AngleSharp.Html.Parser.HtmlParserOptions HtmlParserOptions = new()
         {
@@ -62,11 +66,32 @@ namespace RoomsCalendar.Server.Services
                 using var rooms = await ParseFetchResultAsync(await response.Content.ReadAsStreamAsync(ct), ct);
                 if (rooms.Size != 0)
                 {
-                    var timeZoneToday = TimeZoneInfo.ConvertTimeToUtc(
-                        TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, options.Value.TimeZoneInfo).Date,
-                        options.Value.TimeZoneInfo
-                    );
-                    await dataProvider.UpdateRoomsAsync(rooms.ArraySegment, timeZoneToday, ct);
+                    var buffer = ArrayPool<Room>.Shared.Rent(rooms.Size);
+                    try
+                    {
+                        var timeZoneToday = TimeZoneInfo.ConvertTimeToUtc(
+                            TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, options.Value.TimeZoneInfo).Date,
+                            options.Value.TimeZoneInfo
+                        );
+
+                        var reservedCnt = rooms
+                            .AsValueEnumerable()
+                            .Where(r => r.EventName.AsSpan().EndsWith(MatchEventName, StringComparison.InvariantCultureIgnoreCase))
+                            .Select(r => r.ToDomainRoom())
+                            .CopyTo(buffer.AsSpan());
+                        await reservedRoomsProvider.UpdateRoomsAsync((ReadOnlySpan<Room>)buffer.AsSpan(0, reservedCnt), timeZoneToday, ct);
+
+                        var vacantCnt = rooms
+                            .AsValueEnumerable()
+                            .Where(r => string.IsNullOrWhiteSpace(r.EventName))
+                            .Select(r => r.ToDomainRoom())
+                            .CopyTo(buffer.AsSpan());
+                        await vacantRoomsProvider.UpdateRoomsAsync((ReadOnlySpan<Room>)buffer.AsSpan(0, vacantCnt), timeZoneToday, ct);
+                    }
+                    finally
+                    {
+                        ArrayPool<Room>.Shared.Return(buffer, true);
+                    }
                 }
             }
             catch (Exception ex)
@@ -101,7 +126,7 @@ namespace RoomsCalendar.Server.Services
             }
         }
 
-        async ValueTask<PooledArray<Room>> ParseFetchResultAsync(Stream content, CancellationToken ct = default)
+        async ValueTask<PooledArray<TitechRoom>> ParseFetchResultAsync(Stream content, CancellationToken ct = default)
         {
             using var doc = await new AngleSharp.Html.Parser.HtmlParser(HtmlParserOptions).ParseDocumentAsync(content, ct);
             var mainContainer = doc.GetElementById("div");
@@ -115,34 +140,89 @@ namespace RoomsCalendar.Server.Services
                 .AsValueEnumerable()
                 .SelectMany(e =>
                 {
-                    var placeName = e.GetElementsByClassName("spshow")
-                        .FirstOrDefault(e => e.TagName.Equals(AngleSharp.Dom.TagNames.Th, StringComparison.OrdinalIgnoreCase))?
-                        .GetElementsByTagName(AngleSharp.Dom.TagNames.Br)
-                        .FirstOrDefault()?
-                        .NextSibling?
-                        .TextContent
+                    var placeName = e.GetElementsByTagName(AngleSharp.Dom.TagNames.Th)
+                        .ElementAtOrDefault(2)
+                        ?.FirstChild
+                        ?.TextContent
                         .Trim();
                     return e.GetElementsByTagName(AngleSharp.Dom.TagNames.Td)
                         .AsValueEnumerable()
-                        .Where(e => e.TextContent == MatchTdContent)
-                        .GroupBy(e => e.GetAttribute("data-merge"))
-                        .Where(g => !string.IsNullOrWhiteSpace(g.Key) && g.Any())
-                        .Select(g =>
+                        .Where(e => string.IsNullOrWhiteSpace(e.TextContent) || e.TextContent.AsSpan().Trim().EndsWith(MatchEventName, StringComparison.OrdinalIgnoreCase))
+                        .Select(e =>
                         {
-                            var (first, last) = (g.First(), g.Last());
+                            var mergeKeyString = e.GetAttribute("data-merge");
+                            var dateString = e.GetAttribute("data-date");
+                            Span<char> strBuffer = stackalloc char[DateTimeParseFormat.Length];
                             DateTimeOffset timeStart = TimeZoneInfo.ConvertTimeToUtc(
-                                DateTime.ParseExact(first.GetAttribute("data-date") + first.GetAttribute("data-timefrom"), DateTimeParseFormat, null),
+                                DateTime.ParseExact(GetDateTimeString(strBuffer, dateString, e.GetAttribute("data-timefrom")), DateTimeParseFormat, null),
                                 timeZoneInfo
                             );
                             DateTimeOffset timeEnd = TimeZoneInfo.ConvertTimeToUtc(
-                                DateTime.ParseExact(last.GetAttribute("data-date") + last.GetAttribute("data-timeto"), DateTimeParseFormat, null),
+                                DateTime.ParseExact(GetDateTimeString(strBuffer, dateString, e.GetAttribute("data-timeto")), DateTimeParseFormat, null),
                                 timeZoneInfo
                             );
-                            return new Room(placeName!, timeStart.ToOffset(timeZoneOffset), timeEnd.ToOffset(timeZoneOffset));
+                            return new TitechRoom
+                            {
+                                EventName = e.TextContent.Trim(),
+                                PlaceName = placeName!,
+                                MergeKey = string.IsNullOrWhiteSpace(mergeKeyString) ? 0L : long.Parse(mergeKeyString),
+                                TimeFrom = timeStart.ToOffset(timeZoneOffset),
+                                TimeTo = timeEnd.ToOffset(timeZoneOffset)
+                            };
                         })
-                        .Where(r => !string.IsNullOrWhiteSpace(r.PlaceName));
+                        .Where(r => !string.IsNullOrWhiteSpace(r.PlaceName))
+                        .SelectMerged(
+                            determiner: (x, y) => x.EventName == y.EventName,
+                            aggregator: (x, y) => new TitechRoom
+                            {
+                                EventName = x.EventName,
+                                PlaceName = x.PlaceName,
+                                MergeKey = x.MergeKey,
+                                TimeFrom = x.TimeFrom < y.TimeFrom ? x.TimeFrom : y.TimeFrom,
+                                TimeTo = x.TimeTo > y.TimeTo ? x.TimeTo : y.TimeTo
+                            }
+                        );
                 })
                 .ToArrayPool();
+
+            static Span<char> GetDateTimeString(Span<char> buffer, string? date, string? time)
+            {
+                buffer.Fill('0');
+                if (!string.IsNullOrEmpty(date))
+                {
+                    date.CopyTo(buffer);
+                }
+                if (!string.IsNullOrEmpty(time))
+                {
+                    if (time.Length < 4)
+                    {
+                        time.CopyTo(buffer[^time.Length..]);
+                    }
+                    else
+                    {
+                        time.TryCopyTo(buffer[^4..]);
+                    }
+                }
+                return buffer;
+            }
+        }
+
+        readonly struct TitechRoom
+        {
+            public string? EventName { get; init; }
+
+            public long MergeKey { get; init; }
+
+            public required string PlaceName { get; init; }
+
+            public DateTimeOffset TimeFrom { get; init; }
+
+            public DateTimeOffset TimeTo { get; init; }
+
+            public Room ToDomainRoom()
+            {
+                return new Room(PlaceName, TimeFrom, TimeTo);
+            }
         }
     }
 
@@ -159,5 +239,94 @@ namespace RoomsCalendar.Server.Services
         TimeSpan IPeriodicBackgroundServiceOptions.Period => FetchInterval;
 
         bool IPeriodicBackgroundServiceOptions.RecoverOnException => false;
+    }
+
+    file static class ValueEnumerableExtensions
+    {
+        public static ValueEnumerable<SelectMergedItr<TEnumerator, T>, T> SelectMerged<TEnumerator, T>(this ValueEnumerable<TEnumerator, T> source, Func<T, T, bool> determiner, Func<T, T, T> aggregator)
+            where TEnumerator : struct, IValueEnumerator<T>, allows ref struct
+        {
+            return new ValueEnumerable<SelectMergedItr<TEnumerator, T>, T>(
+                new SelectMergedItr<TEnumerator, T>(source.Enumerator, determiner, aggregator)
+            );
+        }
+
+        public ref struct SelectMergedItr<TEnumerator, TSource> : IValueEnumerator<TSource>
+            where TEnumerator : struct, IValueEnumerator<TSource>, allows ref struct
+        {
+            TEnumerator source;
+            readonly Func<TSource, TSource, bool> determiner;
+            readonly Func<TSource, TSource, TSource> aggregator;
+
+            byte status = 0; // 0: not initialized, 1: initialized, 2: completed
+            TSource accumulate;
+
+            public SelectMergedItr(TEnumerator source, Func<TSource, TSource, bool> determiner, Func<TSource, TSource, TSource> aggregator)
+            {
+                this.source = source;
+                this.determiner = determiner;
+                this.aggregator = aggregator;
+                Unsafe.SkipInit(out accumulate);
+            }
+
+            public readonly void Dispose()
+            {
+                source.Dispose();
+            }
+
+            public readonly bool TryCopyTo(scoped Span<TSource> destination, Index offset)
+            {
+                return false;
+            }
+
+            public bool TryGetNext(out TSource current)
+            {
+                switch (status)
+                {
+                    case 0:
+                        if (!source.TryGetNext(out accumulate))
+                        {
+                            Unsafe.SkipInit(out current);
+                            return false;
+                        }
+                        status = 1;
+                        goto case 1;
+
+                    case 1:
+                        while (source.TryGetNext(out var next))
+                        {
+                            if (!determiner(accumulate, next))
+                            {
+                                current = accumulate;
+                                accumulate = next;
+                                return true;
+                            }
+                            else
+                            {
+                                accumulate = aggregator(accumulate, next);
+                            }
+                        }
+                        status = 2;
+                        current = accumulate;
+                        return true;
+
+                    default:
+                        Unsafe.SkipInit(out current);
+                        return false;
+                }
+            }
+
+            public readonly bool TryGetNonEnumeratedCount(out int count)
+            {
+                count = default;
+                return false;
+            }
+
+            public readonly bool TryGetSpan(out ReadOnlySpan<TSource> span)
+            {
+                span = default;
+                return false;
+            }
+        }
     }
 }

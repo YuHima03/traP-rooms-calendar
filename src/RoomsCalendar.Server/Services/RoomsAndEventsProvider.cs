@@ -1,4 +1,4 @@
-﻿using RoomsCalendar.Share;
+﻿using RoomsCalendar.Share.Constants;
 using RoomsCalendar.Share.Domain;
 using System.Runtime.InteropServices;
 using Yuh.Collections.Searching;
@@ -13,7 +13,7 @@ namespace RoomsCalendar.Server.Services
 
         public DateTimeOffset LastUpdatedAt { get; private set; }
 
-        public string ProviderName => ProviderNames.Knoq;
+        public string ProviderName => RoomsProviderNames.KnoqRegistered;
 
         public ValueTask<Event[]> GetEventsAsync(DateTimeOffset since, DateTimeOffset until, CancellationToken ct)
         {
@@ -66,6 +66,26 @@ namespace RoomsCalendar.Server.Services
                 }
                 _events.AddRange(events);
                 _events.Sort(EventsExtensions.StartsAtComparer);
+                LastUpdatedAt = DateTimeOffset.UtcNow;
+            }
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask UpdateRoomsAsync(ReadOnlySpan<Room> rooms, DateTimeOffset since, CancellationToken ct)
+        {
+            lock (_rooms)
+            {
+                var idx = BinarySearch.LowerBound<Room, DateTimeOffset>(CollectionsMarshal.AsSpan(_rooms), since, RoomsExtensions.CompareAvailableUntil);
+                if (idx == 0)
+                {
+                    _rooms.Clear();
+                }
+                else if (idx > 0)
+                {
+                    CollectionsMarshal.SetCount(_rooms, idx);
+                }
+                _rooms.AddRange(rooms);
+                _rooms.Sort(RoomsExtensions.CompareToAvailableUntil);
                 LastUpdatedAt = DateTimeOffset.UtcNow;
             }
             return ValueTask.CompletedTask;

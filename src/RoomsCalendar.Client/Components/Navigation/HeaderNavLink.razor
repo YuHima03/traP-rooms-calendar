@@ -1,0 +1,15 @@
+﻿<NavLink @attributes="AdditionalAttributes"
+         ChildContent="ChildContent"
+         Match="Match"
+         class="tx-button py-2 hover:opacity-80 [&.active]:text-note-primary [&.active]:border-b-2 [&.active]:border-tx-note-primary" />
+
+@code {
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public NavLinkMatch Match { get; set; } = NavLinkMatch.All;
+}
