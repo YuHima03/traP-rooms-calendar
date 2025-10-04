@@ -21,7 +21,7 @@ namespace RoomsCalendar.Server.Services
         [StringSyntax(StringSyntaxAttribute.DateTimeFormat)]
         const string DateTimeParseFormat = "yyyyMMddHHmm";
 
-        const string MatchEventName = "サークル活動：デジタル創作同好会traP";
+        const string MatchEventName = "デジタル創作同好会traP";
 
         readonly AngleSharp.Html.Parser.HtmlParserOptions HtmlParserOptions = new()
         {
@@ -76,7 +76,7 @@ namespace RoomsCalendar.Server.Services
 
                         var reservedCnt = rooms
                             .AsValueEnumerable()
-                            .Where(r => MatchEventName.Equals(r.EventName, StringComparison.InvariantCultureIgnoreCase))
+                            .Where(r => r.EventName.AsSpan().EndsWith(MatchEventName, StringComparison.InvariantCultureIgnoreCase))
                             .Select(r => r.ToDomainRoom())
                             .CopyTo(buffer.AsSpan());
                         await reservedRoomsProvider.UpdateRoomsAsync((ReadOnlySpan<Room>)buffer.AsSpan(0, reservedCnt), timeZoneToday, ct);
@@ -147,7 +147,7 @@ namespace RoomsCalendar.Server.Services
                         .Trim();
                     return e.GetElementsByTagName(AngleSharp.Dom.TagNames.Td)
                         .AsValueEnumerable()
-                        .Where(e => string.IsNullOrWhiteSpace(e.TextContent) || e.TextContent.AsSpan().Trim().Equals(MatchEventName, StringComparison.OrdinalIgnoreCase))
+                        .Where(e => string.IsNullOrWhiteSpace(e.TextContent) || e.TextContent.AsSpan().Trim().EndsWith(MatchEventName, StringComparison.OrdinalIgnoreCase))
                         .Select(e =>
                         {
                             var mergeKeyString = e.GetAttribute("data-merge");
