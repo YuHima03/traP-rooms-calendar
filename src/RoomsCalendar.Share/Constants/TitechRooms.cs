@@ -112,5 +112,26 @@ namespace RoomsCalendar.Share.Constants
             ],
             r => r.Name.ToString()
         );
+
+        public static readonly FrozenSet<string> ReservableRoomNames = [
+            // M
+            "M-278", "M-356", "M-374",
+            // W2
+            "W2-401", "W2-402",
+            // W5
+            "W5-104", "W5-105", "W5-106", "W5-107",
+            // WL1
+            "WL1-201", "WL1-401",
+            // WL2
+            "WL2-101", "WL2-201", "WL2-301", "WL2-401",
+            // S2
+            "S2-201", "S2-202", "S2-203", "S2-204",
+            // S3
+            "S3-206", "S3-207", "S3-215",
+            // I1
+            "I1-255",
+            // I3
+            "I3-107", "I3-203"
+        ]; 
     }
 }
