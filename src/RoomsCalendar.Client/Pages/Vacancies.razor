@@ -36,7 +36,7 @@
     </AlertCard>
 
     <div class="grid md:grid-cols-2 gap-3 grow">
-        @if (roomsVacantNow.Length == 0)
+        @if (reservableRooms.Length == 0)
         {
             <p>
                 現在利用可能な部屋はありません。
@@ -44,7 +44,7 @@
         }
         else
         {
-            @foreach (var r in roomsVacantNow)
+            @foreach (var r in reservableRooms)
             {
                 <RoomCard PlaceName="@r.PlaceName"
                           AvailableTimes="@([(r.AvailableSince, r.AvailableUntil)])"
@@ -56,44 +56,22 @@
 </div>
 
 @code {
-    [Inject(Key = RoomsProviderNames.TitechVacant)]
-    IRoomsProvider? VacantRoomsProvider { get; set; }
+    [Inject(Key = RoomsProviderNames.TitechReservable)]
+    IRoomsProvider? ReservableRoomsProvider { get; set; }
 
-    Room[] roomsVacantNow = [];
+    Room[] reservableRooms = [];
 
     protected override async Task OnInitializedAsync()
     {
-        if (VacantRoomsProvider is not null)
+        if (ReservableRoomsProvider is not null)
         {
             var timeZoneToday = TimeZoneInfo.ConvertTimeToUtc(
                 TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZone).Date,
                 TimeZone
             );
             var utcNow = DateTimeOffset.UtcNow;
-            roomsVacantNow = await VacantRoomsProvider.GetRoomsAsync(utcNow, utcNow, CancellationToken.None);
-            roomsVacantNow.AsSpan().Sort((x, y) =>
-            {
-                var constRooms = Share.Constants.TitechRooms.Rooms;
-                bool xExists, yExists;
-                Share.Usecase.TitechRoomInfo xRoom, yRoom;
-                if (constRooms.TryGetAlternateLookup<ReadOnlySpan<char>>(out var lookup))
-                {
-                    xExists = lookup.TryGetValue(new Share.Usecase.TitechRoomInfo(x.PlaceName).Name, out xRoom);
-                    yExists = lookup.TryGetValue(new Share.Usecase.TitechRoomInfo(y.PlaceName).Name, out yRoom);
-                }
-                else
-                {
-                    xExists = constRooms.TryGetValue(new Share.Usecase.TitechRoomInfo(x.PlaceName).Name.ToString(), out xRoom);
-                    yExists = constRooms.TryGetValue(new Share.Usecase.TitechRoomInfo(y.PlaceName).Name.ToString(), out yRoom);
-                }
-                return (xExists, yExists) switch
-                {
-                    (true, true) => yRoom.Capacity.GetValueOrDefault().CompareTo(xRoom.Capacity.GetValueOrDefault()),
-                    (true, false) => -1,
-                    (false, true) => 1,
-                    _ => 0
-                };
-            });
+            reservableRooms = await ReservableRoomsProvider.GetRoomsAsync(utcNow, utcNow, CancellationToken.None);
+            reservableRooms.AsSpan().Sort((x, y) => x.PlaceName.CompareTo(y.PlaceName));
         }
     }
 }

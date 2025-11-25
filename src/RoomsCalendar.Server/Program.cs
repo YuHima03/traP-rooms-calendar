@@ -78,6 +78,7 @@ namespace RoomsCalendar.Server
                         return new ConfigureNamedOptions<TitechRoomsCollectorOptions>(Options.DefaultName, o => config.ConfigureTitechRoomsCollectorOptions(o, sp.GetService<TimeZoneInfo>()));
                     })
                     .AddHostedService<TitechRoomsCollector>();
+                services.Add(new ServiceDescriptor(typeof(IRoomsProvider), RoomsProviderNames.TitechReservable, new RoomsProvider(RoomsProviderNames.TitechReservable)));
                 services.Add(new ServiceDescriptor(typeof(IRoomsProvider), RoomsProviderNames.TitechReserved, new RoomsProvider(RoomsProviderNames.TitechReserved)));
                 services.Add(new ServiceDescriptor(typeof(IRoomsProvider), RoomsProviderNames.TitechVacant, new RoomsProvider(RoomsProviderNames.TitechVacant)));
 
@@ -89,12 +90,11 @@ namespace RoomsCalendar.Server
 
                 services.AddScoped(sp => new HttpClient { BaseAddress = new(sp.GetRequiredService<NavigationManager>().BaseUri) });
 
-                Action<IServiceProvider, DbContextOptionsBuilder> dbContextOptionsAction = (sp, opt) =>
+                services.Configure<NsMySqlConfiguration>(builder.Configuration);
+                services.AddDbContextFactory<Infrastructure.Repository.CalendarStreamsRepository>((sp, opt) =>
                 {
                     opt.UseMySQL(sp.GetRequiredService<IOptions<NsMySqlConfiguration>>().Value.GetConnectionString());
-                };
-                services.Configure<NsMySqlConfiguration>(builder.Configuration);
-                services.AddDbContextFactory<Infrastructure.Repository.CalendarStreamsRepository>(dbContextOptionsAction);
+                });
                 services.AddScoped<Share.Domain.Repository.ICalendarStreamsRepository>(sp => sp.GetRequiredService<Infrastructure.Repository.CalendarStreamsRepository>());
 
                 services.AddAuthentication()
