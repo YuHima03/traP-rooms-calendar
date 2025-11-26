@@ -37,7 +37,7 @@ namespace RoomsCalendar.Server
 
                 services.AddHttpClient();
 
-                services.AddSingleton(GetJstTimeZoneInfo());
+                services.AddSingleton(TimeZoneInfo.FindSystemTimeZoneById("Tokyo Standard Time"));
 
                 services.Configure<KnoqClientOptions>(builder.Configuration);
                 services.Configure<TraqClientOptions>(builder.Configuration);
@@ -124,15 +124,6 @@ namespace RoomsCalendar.Server
                 .AddInteractiveWebAssemblyRenderMode();
 
             app.Run();
-        }
-
-        static TimeZoneInfo GetJstTimeZoneInfo()
-        {
-            if (TimeZoneInfo.TryFindSystemTimeZoneById("Tokyo Standard Time", out var tzi))
-            {
-                return tzi;
-            }
-            return TimeZoneInfo.CreateCustomTimeZone("Tokyo Standard Time", TimeSpan.FromHours(9), null, null);
         }
     }
 }
