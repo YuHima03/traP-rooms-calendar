@@ -139,19 +139,22 @@ namespace RoomsCalendar.Server.Services
             var timeZoneOffset = timeZoneInfo.BaseUtcOffset;
             return mainContainer.GetElementsByClassName("trRoom")
                 .AsValueEnumerable()
-                .SelectMany(e =>
-                {
-                    var placeName = e.GetElementsByTagName(AngleSharp.Dom.TagNames.Th)
+                .Select(e => (
+                    PlaceName: e.GetElementsByTagName(AngleSharp.Dom.TagNames.Th)
                         .ElementAtOrDefault(2)
                         ?.FirstChild
                         ?.TextContent
-                        .Trim();
+                        .Trim(),
+                    Element: e
+                ))
+                .Where(tuple => !string.IsNullOrWhiteSpace(tuple.PlaceName))
+                .SelectMany(tuple =>
+                {
+                    var (placeName, e) = tuple;
                     return e.GetElementsByTagName(AngleSharp.Dom.TagNames.Td)
                         .AsValueEnumerable()
-                        .Where(e => string.IsNullOrWhiteSpace(e.TextContent) || e.TextContent.AsSpan().Trim().EndsWith(MatchEventName, StringComparison.OrdinalIgnoreCase))
                         .Select(e =>
                         {
-                            var mergeKeyString = e.GetAttribute("data-merge");
                             var dateString = e.GetAttribute("data-date");
                             Span<char> strBuffer = stackalloc char[DateTimeParseFormat.Length];
                             DateTimeOffset timeStart = TimeZoneInfo.ConvertTimeToUtc(
@@ -166,23 +169,22 @@ namespace RoomsCalendar.Server.Services
                             {
                                 EventName = e.TextContent.Trim(),
                                 PlaceName = placeName!,
-                                MergeKey = string.IsNullOrWhiteSpace(mergeKeyString) ? 0L : long.Parse(mergeKeyString),
                                 TimeFrom = timeStart.ToOffset(timeZoneOffset),
                                 TimeTo = timeEnd.ToOffset(timeZoneOffset)
                             };
                         })
-                        .Where(r => !string.IsNullOrWhiteSpace(r.PlaceName))
+                        .OrderBy(r => r.TimeFrom)
                         .SelectMerged(
                             determiner: (x, y) => x.EventName == y.EventName,
                             aggregator: (x, y) => new TitechRoom
                             {
                                 EventName = x.EventName,
                                 PlaceName = x.PlaceName,
-                                MergeKey = x.MergeKey,
-                                TimeFrom = x.TimeFrom < y.TimeFrom ? x.TimeFrom : y.TimeFrom,
-                                TimeTo = x.TimeTo > y.TimeTo ? x.TimeTo : y.TimeTo
+                                TimeFrom = x.TimeFrom,
+                                TimeTo = y.TimeTo
                             }
-                        );
+                        )
+                        .Where(e => string.IsNullOrWhiteSpace(e.EventName) || e.EventName.AsSpan().Contains(MatchEventName, StringComparison.OrdinalIgnoreCase));
                 })
                 .ToArrayPool();
 

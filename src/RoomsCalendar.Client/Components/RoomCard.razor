@@ -1,9 +1,10 @@
-﻿@using DateTimePeriod = (DateTimeOffset Since, DateTimeOffset Until)
+﻿@using ZLinq
+@using DateTimePeriod = (DateTimeOffset Since, DateTimeOffset Until)
 
 <div class="p-3 flex flex-col gap-y-2 border-1 border-default-secondary rounded-xl
             [&[isavailable]]:border-2 [&[isavailable]]:border-teal-400
             [&[isoccupied]]:border-2 [&[isoccupied]]:border-dangerous-primary
-            [&[isclosed]]:bg-default-tertiary [&[isclosed]]:text-default-tertiary [&[isclosed]]:border-default-primary"
+            [&[isclosed]]:bg-default-tertiary [&[isclosed]]:text-disabled-primary [&[isclosed]]:border-default-primary"
      @attributes="@InnerAttributes">
     <div class="flex flex-row flex-wrap gap-2">
         <span class="grow tx-body-strong truncate text-inherit">
@@ -28,30 +29,49 @@
             </span>
         }
     </div>
-    <div class="flex flex-row flex-wrap gap-2 text-inherit">
-        @for (int i = 0; i < AvailableTimes.Length; i++)
-        {
-            if (i != 0)
+    <div class="flex flex-row flex-wrap gap-1 text-inherit">
+        @{
+            var finished = AvailableTimesFinished;
+            if (finished.Length != 0)
             {
-                <span>,</span>
+                for (int i = 0; i < finished.Length; i++)
+                {
+                    if (i != 0)
+                    {
+                        <span class="text-disabled-primary">,</span>
+                    }
+                    var t = finished[i];
+                    <span class="tx-body text-disabled-primary">
+                        @if (i == 0)
+                        {
+                            @("(")
+                        }
+                        @(FormatDateTimePeriod(t))
+                        @if (i == finished.Length - 1)
+                        {
+                            @(")")
+                        }
+                    </span>
+                }
             }
 
-            var t = AvailableTimes[i];
-            <span class="tx-body text-default-secondary text-inherit">
-                @if (t.Until.Subtract(t.Since) < TimeSpan.FromDays(1))
+            var notFinished = AvailableTimesNotFinished;
+            for (int i = 0; i < notFinished.Length; i++)
+            {
+                @if (i != 0 || finished.Length != 0)
                 {
-                    @($"{t.Since:HH:mm} ~ {t.Until:HH:mm}")
+                    <span>,</span>
                 }
-                else
-                {
-                    @($"{t.Since:HH:mm} ~ {t.Until:MM/dd HH:mm}")
-                }
-            </span>
+                var t = notFinished[i];
+                <span class="tx-body">
+                    @(FormatDateTimePeriod(t))
+                </span>
+            }
         }
     </div>
     @if (IsClosedToday)
     {
-        <span class="tx-body2 text-default-secondary">
+        <span class="tx-body2 text-default-tertiary">
             本日の利用可能時間は終了しました。
         </span>
     }
@@ -102,6 +122,10 @@
     [EditorRequired]
     public required DateTimePeriod[] AvailableTimes { get; set; }
 
+    int _finishedAvailableTimesCount = 0;
+    ReadOnlySpan<DateTimePeriod> AvailableTimesFinished => AvailableTimes.AsSpan(0, _finishedAvailableTimesCount);
+    ReadOnlySpan<DateTimePeriod> AvailableTimesNotFinished => AvailableTimes.AsSpan(_finishedAvailableTimesCount);
+
     /// <summary>
     /// 部屋で開催されるイベント一覧.
     /// </summary>
@@ -137,6 +161,8 @@
 
     Event[] HeldEventNow = [];
 
+    DateTimeOffset UtcNow;
+
     IEnumerable<KeyValuePair<string, object>> InnerAttributes
     {
         get
@@ -160,16 +186,31 @@
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
-
+        UtcNow = DateTimeOffset.UtcNow;
         var availableTimes = AvailableTimes.AsSpan();
         availableTimes.Sort((x, y) => x.Since.CompareTo(y.Since));
-        var utcNow = DateTimeOffset.UtcNow;
 
-        IsClosedToday = availableTimes.Length != 0 && availableTimes[^1].Until < utcNow;
+        int finishedCnt;
+        for (finishedCnt = 0; finishedCnt < availableTimes.Length; finishedCnt++)
+        {
+            if (UtcNow <= availableTimes[finishedCnt].Until)
+            {
+                break;
+            }
+        }
+        _finishedAvailableTimesCount = finishedCnt;
 
-        var i = Yuh.Collections.Searching.BinarySearch.LowerBound<DateTimePeriod, DateTimeOffset>(availableTimes, utcNow, (x, y) => y.CompareTo(x.Since));
-        IsAvailableNow = 0 <= i && availableTimes[i].Since <= utcNow && utcNow <= availableTimes[i].Until;
+        IsClosedToday = availableTimes.Length != 0 && availableTimes[^1].Until < UtcNow;
+        IsAvailableNow = availableTimes.AsValueEnumerable().Any(t => t.Since <= UtcNow && UtcNow <= t.Until);
+        HeldEventNow = [.. Events.Where(e => e.StartsAt <= UtcNow && UtcNow <= e.EndsAt)];
+    }
 
-        HeldEventNow = [.. Events.Where(e => e.StartsAt <= utcNow && utcNow <= e.EndsAt)];
+    static string FormatDateTimePeriod(DateTimePeriod t)
+    {
+        if (t.Until.Subtract(t.Since) < TimeSpan.FromDays(1))
+        {
+            return $"{t.Since:HH:mm} ~ {t.Until:HH:mm}";
+        }
+        return $"{t.Since:HH:mm} ~ {t.Until:MM/dd HH:mm}";
     }
 }

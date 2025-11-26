@@ -73,8 +73,9 @@
                 TimeZone
             );
             var vacantRooms = await VacantRoomsProvider.GetRoomsAsync(timeZoneToday, timeZoneToday.AddTicks(TimeSpan.TicksPerDay - 1), CancellationToken.None);
+            var reservableRooms = TitechRooms.ReservableRoomNames.GetAlternateLookup<ReadOnlySpan<char>>();
             rooms = vacantRooms.AsValueEnumerable()
-                .Where(r => TitechRooms.ReservableRoomNames.Contains(r.PlaceName))
+                .Where(r => reservableRooms.Contains(new TitechRoomInfo(r.PlaceName).Name))
                 .GroupBy(r => r.PlaceName)
                 .Select(g => (
                     PlaceName: g.Key,

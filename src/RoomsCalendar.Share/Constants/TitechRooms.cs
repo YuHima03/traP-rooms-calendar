@@ -139,6 +139,7 @@ namespace RoomsCalendar.Share.Constants
             Enumerable.Select(selector: KeyValuePair.Create, source: [
                 "M",
                 "S",
+                "W5",
                 "W",
                 "WL2",
                 "WL1",
