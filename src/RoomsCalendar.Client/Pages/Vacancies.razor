@@ -1,5 +1,8 @@
 ﻿@page "/vacancies"
 @using RoomsCalendar.Share.Constants
+@using RoomsCalendar.Share.Usecase
+@using ZLinq
+@using AvailableTime = (DateTimeOffset AvailableSince, DateTimeOffset AvailableUntil)
 @inject TimeZoneInfo TimeZone
 
 <div class="flex flex-col gap-y-4">
@@ -36,7 +39,7 @@
     </AlertCard>
 
     <div class="grid md:grid-cols-2 gap-3 grow">
-        @if (reservableRooms.Length == 0)
+        @if (rooms.Length == 0)
         {
             <p>
                 現在利用可能な部屋はありません。
@@ -44,10 +47,10 @@
         }
         else
         {
-            @foreach (var r in reservableRooms)
+            @foreach (var r in rooms)
             {
                 <RoomCard PlaceName="@r.PlaceName"
-                          AvailableTimes="@([(r.AvailableSince, r.AvailableUntil)])"
+                          AvailableTimes="@r.AvailableTimes"
                           IsKnoqRegistered="true" />
             }
         }
@@ -56,22 +59,32 @@
 </div>
 
 @code {
-    [Inject(Key = RoomsProviderNames.TitechReservable)]
-    IRoomsProvider? ReservableRoomsProvider { get; set; }
+    [Inject(Key = RoomsProviderNames.TitechVacant)]
+    IRoomsProvider? VacantRoomsProvider { get; set; }
 
-    Room[] reservableRooms = [];
+    (string PlaceName, AvailableTime[] AvailableTimes)[] rooms = [];
 
     protected override async Task OnInitializedAsync()
     {
-        if (ReservableRoomsProvider is not null)
+        if (VacantRoomsProvider is not null)
         {
             var timeZoneToday = TimeZoneInfo.ConvertTimeToUtc(
                 TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZone).Date,
                 TimeZone
             );
-            var utcNow = DateTimeOffset.UtcNow;
-            reservableRooms = await ReservableRoomsProvider.GetRoomsAsync(utcNow, utcNow, CancellationToken.None);
-            reservableRooms.AsSpan().Sort((x, y) => x.PlaceName.CompareTo(y.PlaceName));
+            var vacantRooms = await VacantRoomsProvider.GetRoomsAsync(timeZoneToday, timeZoneToday.AddTicks(TimeSpan.TicksPerDay - 1), CancellationToken.None);
+            rooms = vacantRooms.AsValueEnumerable()
+                .Where(r => TitechRooms.ReservableRoomNames.Contains(r.PlaceName))
+                .GroupBy(r => r.PlaceName)
+                .Select(g => (
+                    PlaceName: g.Key,
+                    AvailableTimes: g.AsValueEnumerable()
+                        .Select(r => (r.AvailableSince, r.AvailableUntil))
+                        .OrderBy(t => t.AvailableSince)
+                        .ToArray()
+                ))
+                .OrderBy(r => new TitechRoomInfo(r.PlaceName).Building, TitechRooms.DefaultBuildingComparerForReservation)
+                .ToArray();
         }
     }
 }

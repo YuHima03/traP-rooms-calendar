@@ -78,7 +78,6 @@ namespace RoomsCalendar.Server
                         return new ConfigureNamedOptions<TitechRoomsCollectorOptions>(Options.DefaultName, o => config.ConfigureTitechRoomsCollectorOptions(o, sp.GetService<TimeZoneInfo>()));
                     })
                     .AddHostedService<TitechRoomsCollector>();
-                services.Add(new ServiceDescriptor(typeof(IRoomsProvider), RoomsProviderNames.TitechReservable, new RoomsProvider(RoomsProviderNames.TitechReservable)));
                 services.Add(new ServiceDescriptor(typeof(IRoomsProvider), RoomsProviderNames.TitechReserved, new RoomsProvider(RoomsProviderNames.TitechReserved)));
                 services.Add(new ServiceDescriptor(typeof(IRoomsProvider), RoomsProviderNames.TitechVacant, new RoomsProvider(RoomsProviderNames.TitechVacant)));
 

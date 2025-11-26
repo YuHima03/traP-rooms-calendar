@@ -9,7 +9,6 @@ using ZLinq;
 namespace RoomsCalendar.Server.Services
 {
     sealed class TitechRoomsCollector(
-        [FromKeyedServices(RoomsProviderNames.TitechReservable)] IRoomsProvider reservableRoomsProvider,
         [FromKeyedServices(RoomsProviderNames.TitechReserved)] IRoomsProvider reservedRoomsProvider,
         [FromKeyedServices(RoomsProviderNames.TitechVacant)] IRoomsProvider vacantRoomsProvider,
         IHttpClientFactory httpClientFactory,
@@ -64,7 +63,8 @@ namespace RoomsCalendar.Server.Services
                 {
                     logger.LogWarning("HTTP request to {SourceUri} failed with status code {StatusCode}.", SourceUri, response.StatusCode);
                 }
-                using var rooms = await ParseFetchResultAsync(await response.Content.ReadAsStreamAsync(ct), ct);
+                await using var stream = await response.Content.ReadAsStreamAsync(ct);
+                using var rooms = await ParseFetchResultAsync(stream, ct);
                 if (rooms.Size != 0)
                 {
                     var buffer = ArrayPool<Room>.Shared.Rent(rooms.Size);

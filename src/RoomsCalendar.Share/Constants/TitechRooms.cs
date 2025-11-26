@@ -1,5 +1,6 @@
-﻿using RoomsCalendar.Share.Usecase;
-using System.Collections.Frozen;
+﻿using System.Collections.Frozen;
+using System.Runtime.CompilerServices;
+using RoomsCalendar.Share.Usecase;
 
 namespace RoomsCalendar.Share.Constants
 {
@@ -132,6 +133,49 @@ namespace RoomsCalendar.Share.Constants
             "I1-255",
             // I3
             "I3-107", "I3-203"
-        ]; 
+        ];
+
+        public static readonly FrozenDictionary<string, int> BuildingPriorityForReservation = FrozenDictionary.ToFrozenDictionary(
+            Enumerable.Select(selector: KeyValuePair.Create, source: [
+                "M",
+                "S",
+                "W",
+                "WL2",
+                "WL1",
+                "I"
+            ])
+        );
+
+        public static readonly Comparer<TitechBuildingInfo> DefaultBuildingComparerForReservation = Comparer<TitechBuildingInfo>.Create((x, y) =>
+        {
+            var lookup = BuildingPriorityForReservation.GetAlternateLookup<ReadOnlySpan<char>>();
+            var xPriority = getPriority(lookup, x);
+            var yPriority = getPriority(lookup, y);
+            return (xPriority, yPriority) switch
+            {
+                (null, null) => x.Name.CompareTo(y.Name, StringComparison.OrdinalIgnoreCase),
+                (_, null) => -1,
+                (null, _) => 1,
+                _ => xPriority!.Value.CompareTo(yPriority!.Value),
+            };
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static int? getPriority(FrozenDictionary<string, int>.AlternateLookup<ReadOnlySpan<char>> lookup, TitechBuildingInfo bi)
+            {
+                if (lookup.TryGetValue(bi.Name, out var p))
+                {
+                    return p;
+                }
+                else if (lookup.TryGetValue(bi.LocationAndIdNumber, out p))
+                {
+                    return p;
+                }
+                else if (lookup.TryGetValue(bi.Location, out p))
+                {
+                    return p;
+                }
+                return null;
+            }
+        });
     }
 }
