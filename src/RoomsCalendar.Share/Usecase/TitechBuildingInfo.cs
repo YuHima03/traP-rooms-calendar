@@ -15,6 +15,8 @@ namespace RoomsCalendar.Share.Usecase
 
         public ReadOnlySpan<char> Location => RawName.AsSpan()[_p0.._p1];
 
+        public ReadOnlySpan<char> LocationAndIdNumber => RawName.AsSpan()[_p0.._p2];
+
         public int IdNumber => int.Parse(RawName.AsSpan()[_p1.._p2]);
 
         public ReadOnlySpan<char> IdSuffix => RawName.AsSpan()[_p2.._p3];

@@ -146,12 +146,12 @@ namespace RoomsCalendar.Server.Services
             return room.AvailableUntil.CompareTo(since);
         }
 
-        public static Room ToRoom(this Knoq.Model.ResponseRoom room)
+        public static Room ToRoom(this Knoq.Models.ResponseRoom room)
         {
             return new Room(
-                room.Place,
-                DateTimeOffset.Parse(room.TimeStart),
-                DateTimeOffset.Parse(room.TimeEnd)
+                room.Place ?? "",
+                DateTimeOffset.Parse(room.TimeStart ?? ""),
+                DateTimeOffset.Parse(room.TimeEnd ?? "")
             );
         }
     }
