@@ -13,7 +13,7 @@
     <PackageReference Include="AngleSharp" Version="1.4.0" />
     <PackageReference Include="Ical.Net" Version="5.1.2" />
     <PackageReference Include="KnoqNet.Extensions.Authentication" Version="1.0.0-alpha.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.7" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
     <PackageReference Include="Yuh.Collections" Version="1.0.0-rc.3" />
   </ItemGroup>
