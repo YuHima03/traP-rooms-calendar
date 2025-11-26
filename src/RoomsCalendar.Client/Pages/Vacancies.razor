@@ -84,7 +84,7 @@
                         .OrderBy(t => t.AvailableSince)
                         .ToArray()
                 ))
-                .OrderBy(r => new TitechRoomInfo(r.PlaceName).Building, TitechRooms.DefaultBuildingComparerForReservation)
+                .OrderBy(r => new TitechRoomInfo(r.PlaceName), TitechRooms.DefaultBuildingComparerForReservation)
                 .ToArray();
         }
     }
