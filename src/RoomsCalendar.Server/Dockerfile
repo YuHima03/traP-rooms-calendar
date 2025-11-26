@@ -1,8 +1,9 @@
 # Generate css files with TailwindCSS
 FROM node:alpine AS prepare
-WORKDIR /src
-COPY . .
+COPY . /src
+WORKDIR /src/src/RoomsCalendar.Client
 RUN apk update \
+    && npm i \
     && npx -y @go-task/cli tailwind-gen
 
 # Build and Publish
@@ -10,7 +11,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS publish
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY --from=prepare /src .
-RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "src/RoomsCalendar.Server/RoomsCalendar.Server.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # Base
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS base
