@@ -12,10 +12,16 @@ WORKDIR /src
 COPY --from=prepare /src .
 RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
+# Base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS base
+EXPOSE 8080
+USER root
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+RUN apk add --upgrade --no-cache icu-data-full icu-libs tzdata
+
 # Final
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS final
+FROM base AS final
 USER $APP_UID
 WORKDIR /app
-EXPOSE 8080
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "RoomsCalendar.Server.dll"]
