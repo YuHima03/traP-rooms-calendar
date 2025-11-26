@@ -12,7 +12,7 @@ namespace RoomsCalendar.Share.Usecase
 
         public string RawName { get; }
 
-        public ReadOnlySpan<char> Name => RawName.AsSpan()[_p0.._p3];
+        public ReadOnlySpan<char> Name => RawName.AsSpan()[_p0.._p2];
 
         public ReadOnlySpan<char> OldName => RawName.AsSpan()[(_p3 + 1)..(_p4 - 1)];
 

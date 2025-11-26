@@ -1,5 +1,8 @@
 ﻿@page "/vacancies"
 @using RoomsCalendar.Share.Constants
+@using RoomsCalendar.Share.Usecase
+@using ZLinq
+@using AvailableTime = (DateTimeOffset AvailableSince, DateTimeOffset AvailableUntil)
 @inject TimeZoneInfo TimeZone
 
 <div class="flex flex-col gap-y-4">
@@ -36,7 +39,7 @@
     </AlertCard>
 
     <div class="grid md:grid-cols-2 gap-3 grow">
-        @if (roomsVacantNow.Length == 0)
+        @if (rooms.Length == 0)
         {
             <p>
                 現在利用可能な部屋はありません。
@@ -44,10 +47,10 @@
         }
         else
         {
-            @foreach (var r in roomsVacantNow)
+            @foreach (var r in rooms)
             {
                 <RoomCard PlaceName="@r.PlaceName"
-                          AvailableTimes="@([(r.AvailableSince, r.AvailableUntil)])"
+                          AvailableTimes="@r.AvailableTimes"
                           IsKnoqRegistered="true" />
             }
         }
@@ -59,7 +62,7 @@
     [Inject(Key = RoomsProviderNames.TitechVacant)]
     IRoomsProvider? VacantRoomsProvider { get; set; }
 
-    Room[] roomsVacantNow = [];
+    (string PlaceName, AvailableTime[] AvailableTimes)[] rooms = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -69,31 +72,20 @@
                 TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZone).Date,
                 TimeZone
             );
-            var utcNow = DateTimeOffset.UtcNow;
-            roomsVacantNow = await VacantRoomsProvider.GetRoomsAsync(utcNow, utcNow, CancellationToken.None);
-            roomsVacantNow.AsSpan().Sort((x, y) =>
-            {
-                var constRooms = Share.Constants.TitechRooms.Rooms;
-                bool xExists, yExists;
-                Share.Usecase.TitechRoomInfo xRoom, yRoom;
-                if (constRooms.TryGetAlternateLookup<ReadOnlySpan<char>>(out var lookup))
-                {
-                    xExists = lookup.TryGetValue(new Share.Usecase.TitechRoomInfo(x.PlaceName).Name, out xRoom);
-                    yExists = lookup.TryGetValue(new Share.Usecase.TitechRoomInfo(y.PlaceName).Name, out yRoom);
-                }
-                else
-                {
-                    xExists = constRooms.TryGetValue(new Share.Usecase.TitechRoomInfo(x.PlaceName).Name.ToString(), out xRoom);
-                    yExists = constRooms.TryGetValue(new Share.Usecase.TitechRoomInfo(y.PlaceName).Name.ToString(), out yRoom);
-                }
-                return (xExists, yExists) switch
-                {
-                    (true, true) => yRoom.Capacity.GetValueOrDefault().CompareTo(xRoom.Capacity.GetValueOrDefault()),
-                    (true, false) => -1,
-                    (false, true) => 1,
-                    _ => 0
-                };
-            });
+            var vacantRooms = await VacantRoomsProvider.GetRoomsAsync(timeZoneToday, timeZoneToday.AddTicks(TimeSpan.TicksPerDay - 1), CancellationToken.None);
+            var reservableRooms = TitechRooms.ReservableRoomNames.GetAlternateLookup<ReadOnlySpan<char>>();
+            rooms = vacantRooms.AsValueEnumerable()
+                .Where(r => reservableRooms.Contains(new TitechRoomInfo(r.PlaceName).Name))
+                .GroupBy(r => r.PlaceName)
+                .Select(g => (
+                    PlaceName: g.Key,
+                    AvailableTimes: g.AsValueEnumerable()
+                        .Select(r => (r.AvailableSince, r.AvailableUntil))
+                        .OrderBy(t => t.AvailableSince)
+                        .ToArray()
+                ))
+                .OrderBy(r => new TitechRoomInfo(r.PlaceName).Building, TitechRooms.DefaultBuildingComparerForReservation)
+                .ToArray();
         }
     }
 }

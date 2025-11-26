@@ -1,11 +1,12 @@
 ﻿using Knoq;
+using Microsoft.Kiota.Abstractions;
 using RoomsCalendar.Share.Domain;
 using ZLinq;
 
 namespace RoomsCalendar.Server.Services
 {
     sealed class RoomsAndEventsCollector(
-        IKnoqApiClient knoq,
+        KnoqApiClient knoq,
         ILogger<RoomsAndEventsCollector> logger,
         RoomsAndEventsProvider dataProvider,
         TimeZoneInfo? timeZoneInfo = null
@@ -36,7 +37,7 @@ namespace RoomsCalendar.Server.Services
                 {
                     break;
                 }
-                catch (Knoq.Client.ApiException ex) when (ex.ErrorCode == StatusCodes.Status401Unauthorized)
+                catch (ApiException ex) when (ex.ResponseStatusCode == StatusCodes.Status401Unauthorized)
                 {
                     logger.LogWarning("Access token is invalid or expired.");
                 }
@@ -52,7 +53,7 @@ namespace RoomsCalendar.Server.Services
         {
             var utcNow = DateTimeOffset.UtcNow;
             var since = GetSearchSinceUtc(fullCollection);
-            var events = await knoq.EventsApi.GetEventsAsync(dateBegin: since.ToString("O"), cancellationToken: ct);
+            var events = await knoq.Events.GetAsync(q => q.QueryParameters.DateBegin = since.ToString("O"), cancellationToken: ct) ?? [];
             using var filtered = events
                 .AsValueEnumerable()
                 .Select(InternalExtensions.KnoqResponseToDomainEvent)
@@ -64,10 +65,10 @@ namespace RoomsCalendar.Server.Services
         {
             var utcNow = DateTimeOffset.UtcNow;
             var since = GetSearchSinceUtc(fullCollection);
-            var rooms = await knoq.RoomsApi.GetRoomsAsync(dateBegin: since.ToString("O"), cancellationToken: ct);
+            var rooms = await knoq.Rooms.GetAsync(q => q.QueryParameters.DateBegin = since.ToString("O"), cancellationToken: ct) ?? [];
             using var filterd = rooms
                 .AsValueEnumerable()
-                .Where(r => r.Verified)
+                .Where(r => r.Verified is true)
                 .Select(InternalExtensions.KnoqResponseToRoom)
                 .GroupBy(r => r.Place)
                 .Select(g => g
@@ -186,26 +187,26 @@ namespace RoomsCalendar.Server.Services
             yield break;
         }
 
-        public static Event KnoqResponseToDomainEvent(this Knoq.Model.ResponseEvent ev)
+        public static Event KnoqResponseToDomainEvent(this Knoq.Models.ResponseEvent ev)
         {
             return new Event(
-                ev.EventId,
-                ev.Name,
-                ev.Place,
-                DateTimeOffset.Parse(ev.TimeStart),
-                DateTimeOffset.Parse(ev.TimeEnd),
-                !ev.SharedRoom
+                ev.EventId.GetValueOrDefault(),
+                ev.Name ?? "",
+                ev.Place ?? "",
+                DateTimeOffset.Parse(ev.TimeStart ?? ""),
+                DateTimeOffset.Parse(ev.TimeEnd ?? ""),
+                ev.SharedRoom.GetValueOrDefault()
             );
         }
 
-        public static KnoqRoom KnoqResponseToRoom(this Knoq.Model.ResponseRoom room)
+        public static KnoqRoom KnoqResponseToRoom(this Knoq.Models.ResponseRoom room)
         {
             return new KnoqRoom(
-                room.RoomId,
-                room.Place,
-                DateTimeOffset.Parse(room.TimeStart),
-                DateTimeOffset.Parse(room.TimeEnd),
-                DateTimeOffset.Parse(room.UpdatedAt)
+                room.RoomId.GetValueOrDefault(),
+                room.Place ?? "",
+                DateTimeOffset.Parse(room.TimeStart ?? ""),
+                DateTimeOffset.Parse(room.TimeEnd ?? ""),
+                DateTimeOffset.Parse(room.UpdatedAt ?? "")
             );
         }
 

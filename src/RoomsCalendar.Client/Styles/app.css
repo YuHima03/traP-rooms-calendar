@@ -114,6 +114,7 @@
     --color-tx-default-primary: var(--color-black);
     --color-tx-default-secondary: var(--color-gray-7);
     --color-tx-default-tertiary: var(--color-gray-5);
+    --color-tx-disabled-primary: var(--color-gray-4);
     --color-tx-inv-primary: var(--color-white);
     --color-tx-note-primary: var(--color-blue-6);
     --color-tx-success-primary: var(--color-green-6);

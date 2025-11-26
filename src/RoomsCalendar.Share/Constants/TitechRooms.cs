@@ -1,5 +1,6 @@
-﻿using RoomsCalendar.Share.Usecase;
-using System.Collections.Frozen;
+﻿using System.Collections.Frozen;
+using System.Runtime.CompilerServices;
+using RoomsCalendar.Share.Usecase;
 
 namespace RoomsCalendar.Share.Constants
 {
@@ -112,5 +113,70 @@ namespace RoomsCalendar.Share.Constants
             ],
             r => r.Name.ToString()
         );
+
+        public static readonly FrozenSet<string> ReservableRoomNames = [
+            // M
+            "M-278", "M-356", "M-374",
+            // W2
+            "W2-401", "W2-402",
+            // W5
+            "W5-104", "W5-105", "W5-106", "W5-107",
+            // WL1
+            "WL1-201", "WL1-401",
+            // WL2
+            "WL2-101", "WL2-201", "WL2-301", "WL2-401",
+            // S2
+            "S2-201", "S2-202", "S2-203", "S2-204",
+            // S3
+            "S3-206", "S3-207", "S3-215",
+            // I1
+            "I1-255",
+            // I3
+            "I3-107", "I3-203"
+        ];
+
+        public static readonly FrozenDictionary<string, int> BuildingPriorityForReservation = FrozenDictionary.ToFrozenDictionary(
+            Enumerable.Select(selector: KeyValuePair.Create, source: [
+                "M",
+                "S",
+                "W5",
+                "W",
+                "WL2",
+                "WL1",
+                "I"
+            ])
+        );
+
+        public static readonly Comparer<TitechBuildingInfo> DefaultBuildingComparerForReservation = Comparer<TitechBuildingInfo>.Create((x, y) =>
+        {
+            var lookup = BuildingPriorityForReservation.GetAlternateLookup<ReadOnlySpan<char>>();
+            var xPriority = getPriority(lookup, x);
+            var yPriority = getPriority(lookup, y);
+            return (xPriority, yPriority) switch
+            {
+                (null, null) => x.Name.CompareTo(y.Name, StringComparison.OrdinalIgnoreCase),
+                (_, null) => -1,
+                (null, _) => 1,
+                _ => xPriority!.Value.CompareTo(yPriority!.Value),
+            };
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static int? getPriority(FrozenDictionary<string, int>.AlternateLookup<ReadOnlySpan<char>> lookup, TitechBuildingInfo bi)
+            {
+                if (lookup.TryGetValue(bi.Name, out var p))
+                {
+                    return p;
+                }
+                else if (lookup.TryGetValue(bi.LocationAndIdNumber, out p))
+                {
+                    return p;
+                }
+                else if (lookup.TryGetValue(bi.Location, out p))
+                {
+                    return p;
+                }
+                return null;
+            }
+        });
     }
 }
