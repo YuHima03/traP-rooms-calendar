@@ -147,17 +147,19 @@ namespace RoomsCalendar.Share.Constants
             ])
         );
 
-        public static readonly Comparer<TitechBuildingInfo> DefaultBuildingComparerForReservation = Comparer<TitechBuildingInfo>.Create((x, y) =>
+        public static readonly Comparer<TitechRoomInfo> DefaultBuildingComparerForReservation = Comparer<TitechRoomInfo>.Create((x, y) =>
         {
             var lookup = BuildingPriorityForReservation.GetAlternateLookup<ReadOnlySpan<char>>();
-            var xPriority = getPriority(lookup, x);
-            var yPriority = getPriority(lookup, y);
-            return (xPriority, yPriority) switch
+            return (getPriority(lookup, x.Building), getPriority(lookup, y.Building)) switch
             {
                 (null, null) => x.Name.CompareTo(y.Name, StringComparison.OrdinalIgnoreCase),
                 (_, null) => -1,
                 (null, _) => 1,
-                _ => xPriority!.Value.CompareTo(yPriority!.Value),
+                var (xp, yp) => xp.Value.CompareTo(yp.Value) switch
+                {
+                    0 => x.Name.CompareTo(y.Name, StringComparison.OrdinalIgnoreCase),
+                    var c => c,
+                },
             };
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
