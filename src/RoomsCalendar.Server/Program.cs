@@ -1,6 +1,5 @@
 using Knoq.Extensions.Authentication;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.EntityFrameworkCore;
@@ -53,16 +52,10 @@ namespace RoomsCalendar.Server
                     });
                 });
                 services.AddAuthenticatedKnoqApiClient(
-                    (sp, knoqOptions) =>
-                    {
-                        knoqOptions.BaseAddress = sp.GetRequiredService<IOptions<KnoqClientOptions>>().Value.KnoqApiBaseAddress ?? string.Empty;
-                    },
-                    (sp, traqAuthOptions) =>
-                    {
-                        traqAuthOptions.UseCookieAuthentication(
-                            sp.GetRequiredService<IOptions<TraqClientOptions>>().Value.TraqCookieAuthenticationToken ?? throw new Exception("The cookie token for traQ service is not set.")
-                        );
-                    }
+                    (sp, knoqOptions) => knoqOptions.BaseAddress = sp.GetRequiredService<IOptions<KnoqClientOptions>>().Value.KnoqApiBaseAddress ?? string.Empty,
+                    (sp, traqAuthOptions) => traqAuthOptions.UseCookieAuthentication(
+                        sp.GetRequiredService<IOptions<TraqClientOptions>>().Value.TraqCookieAuthenticationToken ?? throw new Exception("The cookie token for traQ service is not set.")
+                    )
                 );
 
                 services
@@ -86,8 +79,6 @@ namespace RoomsCalendar.Server
                 services.AddSingleton<RoomsCalendarProvider>();
 
                 services.AddHttpContextAccessor();
-
-                services.AddScoped(sp => new HttpClient { BaseAddress = new(sp.GetRequiredService<NavigationManager>().BaseUri) });
 
                 services.Configure<NsMySqlConfiguration>(builder.Configuration);
                 services.AddDbContextFactory<Infrastructure.Repository.CalendarStreamsRepository>((sp, opt) =>
