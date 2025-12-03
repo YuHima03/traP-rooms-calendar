@@ -195,7 +195,7 @@ namespace RoomsCalendar.Server.Services
                 ev.Place ?? "",
                 DateTimeOffset.Parse(ev.TimeStart ?? ""),
                 DateTimeOffset.Parse(ev.TimeEnd ?? ""),
-                ev.SharedRoom.GetValueOrDefault()
+                !ev.SharedRoom.GetValueOrDefault(true)
             );
         }
 
